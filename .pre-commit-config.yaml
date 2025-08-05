@@ -1,0 +1,195 @@
+# Pre-commit configuration for DLQ Monitor project
+# Install with: pre-commit install
+# Run on all files: pre-commit run --all-files
+
+repos:
+  # Black code formatter
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=88]
+
+  # isort import sorter
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=88]
+
+  # Ruff linter (replaces flake8, pylint, etc.)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.8
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  # MyPy type checker
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-requests
+          - types-pyyaml
+          - types-setuptools
+        args: [--ignore-missing-imports, --no-strict-optional]
+        exclude: ^(tests/|setup.py)
+
+  # General pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      # Trailing whitespace
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      
+      # End of file fixer
+      - id: end-of-file-fixer
+      
+      # Check YAML files
+      - id: check-yaml
+        args: [--unsafe]  # Allow custom YAML tags
+      
+      # Check JSON files
+      - id: check-json
+      
+      # Check TOML files
+      - id: check-toml
+      
+      # Check XML files
+      - id: check-xml
+      
+      # Check for merge conflicts
+      - id: check-merge-conflict
+      
+      # Check for case conflicts
+      - id: check-case-conflict
+      
+      # Check executable files have shebangs
+      - id: check-executables-have-shebangs
+      
+      # Check shebang scripts are executable
+      - id: check-shebang-scripts-are-executable
+      
+      # Prevent addition of large files
+      - id: check-added-large-files
+        args: [--maxkb=1000]  # 1MB limit
+      
+      # Check Python AST
+      - id: check-ast
+      
+      # Check builtin type constructor use
+      - id: check-builtin-literals
+      
+      # Check docstring is first
+      - id: check-docstring-first
+      
+      # Debug statements checker
+      - id: debug-statements
+      
+      # Name tests test_*.py
+      - id: name-tests-test
+        args: [--pytest-test-first]
+      
+      # Requirements.txt checker
+      - id: requirements-txt-fixer
+      
+      # Mixed line ending checker
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # Security checks with bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        args: [-r, src/]
+        exclude: ^tests/
+
+  # Shell script checks
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        args: [--severity=warning]
+
+  # Dockerfile linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        args: [--ignore, DL3008, --ignore, DL3009]
+
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [-d, relaxed]
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.41.0
+    hooks:
+      - id: markdownlint
+        args: [--fix]
+
+  # Check for secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: ^(\.env\.template|package-lock\.json)$
+
+  # Python docstring formatter
+  - repo: https://github.com/pycqa/docformatter
+    rev: v1.7.5
+    hooks:
+      - id: docformatter
+        args: [--in-place, --wrap-summaries=88, --wrap-descriptions=88]
+
+  # Python upgrade syntax
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.16.0
+    hooks:
+      - id: pyupgrade
+        args: [--py38-plus]
+
+# Global configuration
+default_stages: [commit]
+fail_fast: false
+
+# Exclude patterns
+exclude: |
+  (?x)^(
+      \.git/.*|
+      \.venv/.*|
+      venv/.*|
+      \.pytest_cache/.*|
+      __pycache__/.*|
+      \.mypy_cache/.*|
+      \.ruff_cache/.*|
+      build/.*|
+      dist/.*|
+      .*\.egg-info/.*|
+      htmlcov/.*|
+      \.coverage|
+      \.DS_Store
+  )$
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

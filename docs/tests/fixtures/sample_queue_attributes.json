@@ -1,0 +1,41 @@
+{
+  "payment-processor-dlq": {
+    "ApproximateNumberOfMessages": "5",
+    "ApproximateNumberOfMessagesNotVisible": "0", 
+    "ApproximateNumberOfMessagesDelayed": "0",
+    "CreatedTimestamp": "1704110400",
+    "LastModifiedTimestamp": "1704114000",
+    "QueueArn": "arn:aws:sqs:us-east-1:123456789012:payment-processor-dlq",
+    "ReceiveMessageWaitTimeSeconds": "0",
+    "VisibilityTimeoutSeconds": "30",
+    "MessageRetentionPeriod": "1209600",
+    "MaxReceiveCount": "3",
+    "RedrivePolicy": "{\"deadLetterTargetArn\":\"arn:aws:sqs:us-east-1:123456789012:payment-processor-dlq\",\"maxReceiveCount\":3}"
+  },
+  "notification-service-dlq": {
+    "ApproximateNumberOfMessages": "2",
+    "ApproximateNumberOfMessagesNotVisible": "1",
+    "ApproximateNumberOfMessagesDelayed": "0", 
+    "CreatedTimestamp": "1704110400",
+    "LastModifiedTimestamp": "1704113700",
+    "QueueArn": "arn:aws:sqs:us-east-1:123456789012:notification-service-dlq",
+    "ReceiveMessageWaitTimeSeconds": "0",
+    "VisibilityTimeoutSeconds": "30",
+    "MessageRetentionPeriod": "1209600",
+    "MaxReceiveCount": "5",
+    "RedrivePolicy": "{\"deadLetterTargetArn\":\"arn:aws:sqs:us-east-1:123456789012:notification-service-dlq\",\"maxReceiveCount\":5}"
+  },
+  "data-processor-dlq": {
+    "ApproximateNumberOfMessages": "0",
+    "ApproximateNumberOfMessagesNotVisible": "0",
+    "ApproximateNumberOfMessagesDelayed": "0",
+    "CreatedTimestamp": "1704110400", 
+    "LastModifiedTimestamp": "1704110400",
+    "QueueArn": "arn:aws:sqs:us-east-1:123456789012:data-processor-dlq",
+    "ReceiveMessageWaitTimeSeconds": "0",
+    "VisibilityTimeoutSeconds": "30",
+    "MessageRetentionPeriod": "1209600",
+    "MaxReceiveCount": "1",
+    "RedrivePolicy": "{\"deadLetterTargetArn\":\"arn:aws:sqs:us-east-1:123456789012:data-processor-dlq\",\"maxReceiveCount\":1}"
+  }
+}
