@@ -92,31 +92,31 @@ case "$COMMAND" in
         echo "🔥 Starting Production DLQ Monitor with PR Audio Notifications..."
         echo "⚠️  Press Ctrl+C to stop"
         echo ""
-        python3 run_production_monitor.py "$@"
+        dlq-production "$@"
         ;;
     
     "discover")
         echo "🔍 Discovering DLQ queues in FABIO-PROD..."
-        python3 cli.py discover --profile FABIO-PROD --region sa-east-1
+        dlq-monitor discover --profile FABIO-PROD --region sa-east-1
         ;;
     
     "test")
         CYCLES=${1:-3}
         INTERVAL=${2:-30}
         echo "🧪 Testing DLQ Monitor ($CYCLES cycles, ${INTERVAL}s interval)..."
-        python3 run_limited_monitor.py "$CYCLES" "$INTERVAL"
+        dlq-limited "$CYCLES" "$INTERVAL"
         ;;
     
     "cli")
         SUB_COMMAND="$1"
         shift
         echo "📊 Running CLI: $SUB_COMMAND"
-        python3 cli.py "$SUB_COMMAND" --profile FABIO-PROD --region sa-east-1 "$@"
+        dlq-monitor "$SUB_COMMAND" --profile FABIO-PROD --region sa-east-1 "$@"
         ;;
     
     "notification-test")
         echo "🔔 Testing Mac notifications..."
-        python3 cli.py test-notification --profile FABIO-PROD --region sa-east-1
+        dlq-monitor test-notification --profile FABIO-PROD --region sa-east-1
         ;;
     
     "voice-test")
@@ -146,30 +146,30 @@ case "$COMMAND" in
     
     "live")
         echo "📊 Starting live Claude monitor..."
-        python3 claude_live_monitor.py
+        dlq-live
         ;;
     
     "enhanced" | "dashboard")
         echo "🚀 Starting Enhanced DLQ Investigation Dashboard..."
-        python3 enhanced_live_monitor.py
+        dlq-dashboard
         ;;
     
     "corrections")
         echo "🤖 Starting Claude AI Corrections Monitor..."
         echo "This shows what Claude agents are actually fixing..."
-        python3 claude_corrections_monitor.py
+        dlq-corrections
         ;;
     
     "fixed")
         echo "🚀 Starting Fixed Enhanced Monitor..."
         echo "This properly shows all Claude agents and real DLQ data..."
-        python3 fixed_enhanced_monitor.py
+        dlq-fixed
         ;;
     
     "ultimate" | "top")
         echo "🚀 Starting ULTIMATE CLAUDE AI MONITOR - TOP TOP VERSION!"
         echo "🤖 This is the most comprehensive monitor with EVERYTHING!"
-        python3 ultimate_monitor.py
+        dlq-ultimate
         ;;
     
     "logs")

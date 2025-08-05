@@ -1,0 +1,12 @@
+[console_scripts]
+dlq-corrections = dlq_monitor.dashboards.corrections:main
+dlq-dashboard = dlq_monitor.dashboards.enhanced:main
+dlq-fixed = dlq_monitor.dashboards.fixed_enhanced:main
+dlq-investigate = dlq_monitor.claude.manual_investigation:main
+dlq-limited = dlq_monitor.utils.limited_monitor:main
+dlq-live = dlq_monitor.claude.live_monitor:main
+dlq-monitor = dlq_monitor.cli:cli
+dlq-production = dlq_monitor.utils.production_monitor:main
+dlq-setup = dlq_monitor.utils.github_setup:main
+dlq-status = dlq_monitor.claude.status_checker:main
+dlq-ultimate = dlq_monitor.dashboards.ultimate:main

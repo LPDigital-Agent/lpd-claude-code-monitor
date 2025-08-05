@@ -14,8 +14,8 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from dlq_monitor import DLQMonitor, MonitorConfig
-from pr_notifier.pr_audio_monitor import PRAudioMonitor
+from dlq_monitor.core.monitor import DLQMonitor, MonitorConfig
+from dlq_monitor.notifiers.pr_audio import PRAudioMonitor
 
 class ProductionMonitor:
     def __init__(self, interval=30, enable_pr_monitoring=True):
