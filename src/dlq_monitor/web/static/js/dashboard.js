@@ -170,10 +170,16 @@ function updateDLQStatus(dlqs) {
 // Create DLQ Item element
 function createDLQItem(dlq, status) {
     const div = document.createElement('div');
-    div.className = `dlq-item ${status}`;
+    const isCriticalAlert = dlq.messages >= 100;
+    
+    // Add critical alert class if messages >= 100
+    div.className = `dlq-item ${status} ${isCriticalAlert ? 'critical-alert' : ''}`;
     div.innerHTML = `
         <div>
-            <div class="dlq-name">${dlq.name}</div>
+            <div class="dlq-name">
+                ${dlq.name}
+                ${isCriticalAlert ? '<span class="badge bg-danger pulse-danger ms-2">CRITICAL</span>' : ''}
+            </div>
             <small class="text-muted">${dlq.region || 'sa-east-1'}</small>
         </div>
         <div class="dlq-messages">
@@ -428,11 +434,92 @@ function capitalizeFirst(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+// Force Reinvestigation
+function forceReinvestigation() {
+    if (dlqData.length === 0) {
+        showAlert('No DLQs to investigate', 'warning');
+        return;
+    }
+    
+    // Find the DLQ with most messages
+    const targetDLQ = dlqData.reduce((prev, current) => 
+        (prev.messages > current.messages) ? prev : current
+    );
+    
+    if (targetDLQ.messages === 0) {
+        showAlert('No messages in DLQs to investigate', 'info');
+        return;
+    }
+    
+    startInvestigation(targetDLQ);
+    showAlert(`Force investigation started for ${targetDLQ.name}`, 'success');
+}
+
+// Add log entry to stream
+function addLogEntry(message, type = 'info') {
+    const logStream = document.querySelector('.log-stream');
+    if (!logStream) return;
+    
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${type}`;
+    entry.innerHTML = `<span class="text-muted">${formatTime(new Date())}</span> ${message}`;
+    
+    // Add to top of stream
+    logStream.insertBefore(entry, logStream.firstChild);
+    
+    // Keep only last 50 entries
+    while (logStream.children.length > 50) {
+        logStream.removeChild(logStream.lastChild);
+    }
+}
+
+// Simulate agent activity logs
+function simulateAgentLogs() {
+    const messages = [
+        { text: 'Investigation Agent scanning DLQ queues...', type: 'info' },
+        { text: 'DLQ Analyzer processing message patterns', type: 'info' },
+        { text: 'Code Debugger identified potential fix', type: 'success' },
+        { text: 'Code Reviewer validating changes', type: 'info' },
+        { text: 'High message count detected in payment-dlq', type: 'error' },
+        { text: 'Agent coordination successful', type: 'success' }
+    ];
+    
+    // Add random log every 3-8 seconds
+    setInterval(() => {
+        if (Math.random() > 0.7) {
+            const msg = messages[Math.floor(Math.random() * messages.length)];
+            addLogEntry(msg.text, msg.type);
+        }
+    }, 5000);
+}
+
+// Initialize log streaming
+document.addEventListener('DOMContentLoaded', function() {
+    simulateAgentLogs();
+    
+    // Listen for real agent updates and add to log
+    socket.on('agent_update', function(data) {
+        if (data.status === 'active' || data.status === 'investigating') {
+            addLogEntry(`${data.name} is now ${data.status}: ${data.currentTask || 'Processing...'}`, 'success');
+        }
+    });
+    
+    socket.on('dlq_update', function(data) {
+        data.forEach(dlq => {
+            if (dlq.messages >= 100) {
+                addLogEntry(`⚠️ CRITICAL: ${dlq.name} has ${dlq.messages} messages!`, 'error');
+            }
+        });
+    });
+});
+
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         updateAgentStatus,
         updateDLQStatus,
-        formatTime
+        formatTime,
+        forceReinvestigation,
+        addLogEntry
     };
 }

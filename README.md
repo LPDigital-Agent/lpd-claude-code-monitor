@@ -10,13 +10,14 @@
 
 ## 🌟 Features
 
-### 🎨 **LPD Digital Hive Web Dashboard** (NEW!)
-- Professional dark-themed web interface with orange branding
-- Real-time agent status tracking and monitoring
-- WebSocket-powered live updates
-- DLQ operations center with critical/warning/healthy status
-- Pull request tracking and recent actions timeline
-- Bootstrap 5 + Chart.js visualizations
+### 🎨 **BHiveQ Observability Hub** (NEW!)
+- Professional dark-themed web interface with LPD Digital Hive branding
+- Real-time agent status tracking with activity indicators
+- Live agent activity log streaming
+- Critical alerts with pulsing badges for DLQs over 100 messages
+- Force Reinvestigation button for manual triggers
+- WebSocket-powered real-time updates
+- Bootstrap 5 + responsive design
 - Runs locally on http://localhost:5001
 
 ### 🤖 **Auto-Investigation with Claude AI & MCP Tools**

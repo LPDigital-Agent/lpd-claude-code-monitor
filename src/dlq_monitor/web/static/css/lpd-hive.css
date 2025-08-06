@@ -396,6 +396,10 @@ body {
     animation: pulse 2s infinite;
 }
 
+.badge.pulse-danger {
+    animation: pulse-danger 1s infinite;
+}
+
 @keyframes pulse {
     0% {
         box-shadow: 0 0 0 0 rgba(255, 87, 34, 0.7);
@@ -405,6 +409,56 @@ body {
     }
     100% {
         box-shadow: 0 0 0 0 rgba(255, 87, 34, 0);
+    }
+}
+
+@keyframes pulse-danger {
+    0% {
+        box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.9);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 0 15px rgba(244, 67, 54, 0);
+        transform: scale(1.05);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+        transform: scale(1);
+    }
+}
+
+/* Critical Alert Indicator */
+.dlq-item.critical-alert {
+    border-left: 4px solid var(--danger);
+    animation: alert-flash 1.5s infinite;
+    position: relative;
+}
+
+.dlq-item.critical-alert::after {
+    content: '⚠️';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    animation: bounce 1s infinite;
+}
+
+@keyframes alert-flash {
+    0%, 100% {
+        background: var(--bg-card);
+    }
+    50% {
+        background: rgba(244, 67, 54, 0.1);
+    }
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(-50%);
+    }
+    50% {
+        transform: translateY(-60%);
     }
 }
 
@@ -474,6 +528,86 @@ img[alt="LPD Hive"]:before {
     .agent-card {
         padding: 12px;
     }
+}
+
+/* Log Stream */
+.log-stream {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: var(--success);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 4px;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    padding: 3px 5px;
+    border-left: 2px solid var(--lpd-orange);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.log-entry.error {
+    color: var(--danger);
+    border-left-color: var(--danger);
+}
+
+.log-entry.success {
+    color: var(--success);
+    border-left-color: var(--success);
+}
+
+.log-entry.info {
+    color: var(--info);
+    border-left-color: var(--info);
+}
+
+/* Buttons */
+.btn-outline-orange {
+    color: var(--lpd-orange);
+    border: 1px solid var(--lpd-orange);
+    background: transparent;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-orange:hover {
+    background: var(--lpd-orange);
+    color: var(--bg-primary);
+    transform: scale(1.05);
+}
+
+/* Agent Activity Indicators */
+.agent-activity-sparkline {
+    height: 30px;
+    width: 100%;
+    margin-top: 10px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.activity-bar {
+    position: absolute;
+    bottom: 0;
+    background: linear-gradient(to top, var(--lpd-orange), var(--lpd-orange-light));
+    width: 4px;
+    margin: 0 1px;
+    transition: height 0.3s ease;
 }
 
 /* Loading Animation */
