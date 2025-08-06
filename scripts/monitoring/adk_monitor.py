@@ -4,11 +4,16 @@ ADK Multi-Agent DLQ Monitor System
 Main entry point for the production monitoring system
 """
 
+# Suppress Blake2 hash warnings in Python 3.11
+import warnings
+warnings.filterwarnings('ignore', message='.*blake2.*')
+import logging
+logging.getLogger('root').setLevel(logging.WARNING)
+
 import asyncio
 import os
 import sys
 import signal
-import logging
 import json
 import yaml
 from pathlib import Path
@@ -49,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 
 class ADKMonitor:
-    """Main ADK Monitor Application"""
+    """Main ADK Monitor Application with MCPClient support"""
     
     def __init__(self, mode: str = "production"):
         self.mode = mode
@@ -58,6 +63,7 @@ class ADKMonitor:
         self.sqs_helper = None
         self.notifier = MacNotifier()
         self.dlq_monitor = None
+        self.mcp_client = None  # MCPClient for MCP server communication
         
         # Set up signal handlers
         signal.signal(signal.SIGINT, self._signal_handler)

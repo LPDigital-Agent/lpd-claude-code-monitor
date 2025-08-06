@@ -10,9 +10,15 @@
 
 ## 🌟 Features
 
-### 🤖 **Auto-Investigation with Claude AI**
+### 🤖 **Auto-Investigation with Claude AI & MCP Tools**
 - Automatically triggers Claude Code when DLQs receive messages
-- Multi-agent architecture with subagents for comprehensive analysis
+- Multi-agent architecture with Google ADK framework
+- Enhanced with 5 special MCP tools:
+  - **Context7**: Library documentation and code examples search
+  - **AWS Documentation**: AWS service docs and error code lookup
+  - **CloudWatch Logs**: Advanced log analysis with filtering
+  - **Lambda Tools**: Lambda function debugging and analysis
+  - **Sequential Thinking**: Systematic root cause analysis
 - Creates GitHub PRs with fixes automatically
 - Smart cooldown and timeout management
 
@@ -36,9 +42,10 @@
 
 ## 📋 Prerequisites
 
-- Python 3.8+
-- AWS Account with SQS access
-- GitHub account with Personal Access Token
+- Python 3.8+ (tested with 3.11)
+- AWS Account with SQS access (configured profile)
+- GitHub account (uses `gh` CLI token)
+- Gemini API key for Google ADK agents
 - macOS (for notifications)
 - Claude Code CLI installed
 
@@ -55,14 +62,22 @@ cd lpd-claude-code-monitor
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+# Install Google ADK and additional dependencies
+pip install google-adk google-generativeai
+pip install -r requirements_adk.txt
 ```
 
 ### 3. Configure environment
 ```bash
 cp .env.template .env
 # Edit .env with your settings:
-# - GITHUB_USERNAME
-# - AWS credentials
+# - GEMINI_API_KEY (required for ADK agents)
+# - AWS_PROFILE (default: FABIO-PROD)
+# - AWS_REGION (default: sa-east-1)
+
+# GitHub token from gh CLI (automatic)
+export GITHUB_TOKEN=$(gh auth token 2>/dev/null)
 ```
 
 ### 4. Start monitoring
@@ -84,11 +99,13 @@ cp .env.template .env
 | Command | Description |
 |---------|-------------|
 | `./start_monitor.sh production` | Start production DLQ monitoring |
+| `./start_monitor.sh adk-production` | ADK multi-agent monitoring with MCP tools |
 | `./start_monitor.sh enhanced` | Launch enhanced dashboard |
 | `./start_monitor.sh discover` | Discover all DLQ queues |
 | `./start_monitor.sh test` | Test mode (3 cycles) |
 | `./start_monitor.sh cli monitor` | CLI monitoring interface |
 | `./start_monitor.sh pr-audio-test` | Test PR audio notifications |
+| `python tests/validation/test_adk_simple.py` | Validate ADK system setup |
 
 ### Configuration
 

@@ -4,7 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AWS SQS Dead Letter Queue (DLQ) monitoring system with Claude AI auto-investigation capabilities. The system monitors DLQs in AWS accounts, triggers automated investigations when messages are detected, and creates GitHub PRs with fixes.
+AWS SQS Dead Letter Queue (DLQ) monitoring system with Claude AI auto-investigation capabilities enhanced with 5 special MCP tools. The system monitors DLQs in AWS accounts, triggers automated investigations when messages are detected using Google ADK multi-agent framework, and creates GitHub PRs with fixes.
+
+### MCP Tools Available
+- **Context7**: Library documentation and code examples search
+- **AWS Documentation**: AWS service docs and error code lookup  
+- **CloudWatch Logs**: Advanced log analysis with filtering
+- **Lambda Tools**: Lambda function debugging and analysis
+- **Sequential Thinking**: Systematic root cause analysis
 
 ## Build and Development Commands
 
@@ -18,7 +25,13 @@ make install          # Production dependencies only
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+# Install Google ADK and additional requirements
+pip install google-adk google-generativeai
+pip install -r requirements_adk.txt
+
 cp .env.template .env  # Configure GitHub and AWS credentials
+export GITHUB_TOKEN=$(gh auth token 2>/dev/null)  # Use gh CLI token
 ```
 
 ### Testing
@@ -30,6 +43,7 @@ pytest tests/unit/test_specific.py::test_function  # Run single test
 
 # Test specific components
 ./start_monitor.sh test-claude      # Test Claude Code integration
+python tests/validation/test_adk_simple.py  # Validate ADK system setup
 ./start_monitor.sh test-execution   # Test Claude execution
 ./start_monitor.sh pr-audio-test    # Test PR audio notifications
 ./start_monitor.sh notification-test # Test macOS notifications
@@ -48,6 +62,9 @@ make clean            # Clean build artifacts and cache
 # Production monitoring with auto-investigation
 ./start_monitor.sh production
 
+# ADK multi-agent monitoring with MCP tools
+./start_monitor.sh adk-production
+
 # Dashboard variants (curses-based terminal UI)
 ./start_monitor.sh enhanced   # Original enhanced dashboard
 ./start_monitor.sh ultimate   # Most comprehensive dashboard
@@ -60,6 +77,9 @@ dlq-investigate      # Manual investigation
 ```
 
 ## High-Level Architecture
+
+### Enhanced with Google ADK & MCP Tools
+The system now uses Google ADK (Agent Development Kit) for multi-agent coordination and includes 5 special MCP (Model Context Protocol) tools for comprehensive investigation capabilities. The Investigation Agent (`adk_agents/investigator.py`) has been enhanced with tool functions for each MCP server.
 
 ### Package Structure (src-layout)
 ```
@@ -114,6 +134,11 @@ Event → Priority Check → Channel Selection → Delivery
 
 ## Critical Files and Their Roles
 
+### Configuration Files
+- `config/mcp_settings.json`: MCP server configurations for all tools
+- `config/adk_config.yaml`: ADK agent configuration
+- `requirements_adk.txt`: ADK and MCP dependencies (MCP servers commented out as optional)
+
 ### State Management
 - `.claude_sessions.json`: Active Claude investigation tracking
 - `dlq_monitor_FABIO-PROD_sa-east-1.log`: Main application log
@@ -153,6 +178,17 @@ The system spawns Claude Code CLI as a subprocess:
 - Session tracking: Updates `.claude_sessions.json`
 - Timeout: Configurable per investigation type
 - Cooldown: Prevents investigation loops
+
+## Known Issues
+
+### Blake2 Hash Warnings
+- Python 3.11 shows Blake2 hash warnings - these are harmless and don't affect functionality
+- Can be safely ignored
+
+### Package Names
+- **Correct**: `pip install google-adk` (Google ADK framework)
+- **Wrong**: `pip install google-genai-developer-toolkit` (doesn't exist)
+- Also need: `pip install google-generativeai` (for Gemini API)
 
 ## Development Workflow
 

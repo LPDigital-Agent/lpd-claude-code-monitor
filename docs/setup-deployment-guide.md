@@ -46,7 +46,7 @@ graph TD
 # Install Homebrew if not present
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Install Python 3.11+
+# Install Python 3.11+ (tested with 3.11.10)
 brew install python@3.11
 
 # Install Node.js 18+
@@ -132,6 +132,10 @@ aws sts get-caller-identity --profile FABIO-PROD
 git clone https://github.com/your-org/lpd-claude-code-monitor.git
 cd lpd-claude-code-monitor
 
+# Fix script permissions
+chmod +x scripts/fix_permissions.sh
+./scripts/fix_permissions.sh
+
 # Verify structure
 ls -la
 # Should see: src/, adk_agents/, config/, scripts/, etc.
@@ -153,8 +157,15 @@ pip install --upgrade pip
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Install Google ADK and Generative AI
+pip install google-adk google-generativeai
+
+# Install ADK requirements (optional MCP servers commented out)
 pip install -r requirements_adk.txt
-pip install -e .  # Install package in development mode
+
+# Install package in development mode
+pip install -e .
 ```
 
 ### 3. Environment Configuration
@@ -171,7 +182,11 @@ nano .env  # or vim, code, etc.
 ```bash
 # Required API Keys
 GEMINI_API_KEY=AIzaSyCUWoLo3bV7XxKwvuzGeiO_SKkikdGI0i4
-GITHUB_TOKEN=gho_xxxxxxxxxxxxxxxxxxxx  # Or leave empty for gh CLI
+
+# GitHub token from gh CLI (automatic)
+# Run: export GITHUB_TOKEN=$(gh auth token 2>/dev/null)
+# Or add here directly:
+GITHUB_TOKEN=gho_xxxxxxxxxxxxxxxxxxxx
 
 # AWS Configuration
 AWS_PROFILE=FABIO-PROD
@@ -339,7 +354,10 @@ aws sqs list-queues --profile FABIO-PROD --region sa-east-1
 gh auth status
 
 # Test Gemini API
-python -c "import google.generativeai as genai; genai.configure(api_key='$GEMINI_API_KEY'); print('Gemini OK')"
+python -c "import google.generativeai as genai; import os; genai.configure(api_key=os.getenv('GEMINI_API_KEY')); print('Gemini OK')"
+
+# Test Google ADK
+python -c "from google.adk import Agent, Runner; print('ADK OK')"
 
 # Test MCP servers
 npx @mcp-servers/aws --version
@@ -349,12 +367,41 @@ npx @modelcontextprotocol/server-github --version
 ### 3. Dry Run
 
 ```bash
+# Run validation test
+python tests/validation/test_adk_simple.py
+
 # Run in test mode (3 cycles)
-./scripts/start_monitor.sh adk-test 3
+./scripts/start_monitor.sh adk-test
 
 # Check logs
 tail -f logs/adk_monitor.log
 ```
+
+## Common Issues and Solutions
+
+### Blake2 Hash Warnings
+```
+ERROR:root:code for hash blake2b was not found
+```
+**Solution**: Harmless warning in Python 3.11. Can be ignored.
+
+### Wrong Package Name
+```
+ERROR: No matching distribution found for google-genai-developer-toolkit
+```
+**Solution**: Use `pip install google-adk` instead.
+
+### Missing GitHub Token
+```
+❌ GITHUB_TOKEN: Not set
+```
+**Solution**: Run `export GITHUB_TOKEN=$(gh auth token 2>/dev/null)`
+
+### MCP Server Versions
+```
+ERROR: Could not find a version that satisfies the requirement awslabs.aws-api-mcp-server>=1.0.0
+```
+**Solution**: MCP servers are optional. They're commented out in requirements_adk.txt.
 
 ## Deployment
 

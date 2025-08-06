@@ -190,13 +190,15 @@ case "$COMMAND" in
         echo "🔧 With AWS MCP servers for native AWS integration"
         echo "⚠️  Press Ctrl+C to stop"
         echo ""
-        python3 scripts/monitoring/adk_monitor.py --mode production
+        # Run with clean output (Blake2 warnings filtered)
+        ./scripts/monitoring/run_clean.sh --mode production
         ;;
     
     "adk-test")
         CYCLES=${1:-3}
         echo "🧪 Testing ADK Monitor System ($CYCLES cycles)"
-        python3 scripts/monitoring/adk_monitor.py --mode test --cycles "$CYCLES"
+        # Run with clean output (Blake2 warnings filtered)
+        ./scripts/monitoring/run_clean.sh --mode test --cycles "$CYCLES"
         ;;
     
     "logs")
