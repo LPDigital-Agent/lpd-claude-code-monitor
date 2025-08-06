@@ -203,10 +203,10 @@ body.neurocenter-body {
 /* Main Container */
 .neurocenter-container {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 20px;
     padding: 80px 20px 20px;
-    max-width: 1600px;
+    max-width: 1800px;
     margin: 0 auto;
 }
 
@@ -220,6 +220,34 @@ body.neurocenter-body {
     display: flex;
     flex-direction: column;
     min-height: 300px;
+}
+
+/* Grid positioning for optimal layout */
+/* Row 1: Investigation Timeline and Live Agent Overview side by side */
+.module-card[data-module="timeline"] {
+    grid-column: span 3;
+}
+
+.module-card[data-module="agents"] {
+    grid-column: span 3;
+}
+
+/* Row 2: Live Metrics, Dead Letter Queues, Recent Actions side by side */
+.module-card[data-module="metrics"] {
+    grid-column: span 2;
+}
+
+.module-card[data-module="dlqs"] {
+    grid-column: span 2;
+}
+
+.module-card[data-module="actions"] {
+    grid-column: span 2;
+}
+
+/* Row 3: Agent-DLQ Assignment Matrix takes full width */
+.module-card[data-module="matrix"] {
+    grid-column: span 6;
 }
 
 .module-card:hover {
@@ -1333,10 +1361,16 @@ body.neurocenter-body {
         grid-template-columns: repeat(2, 1fr);
     }
     
-    .module-card[data-module="timeline"] {
-        grid-column: span 2;
+    /* All modules take half width on medium screens */
+    .module-card[data-module="timeline"],
+    .module-card[data-module="agents"],
+    .module-card[data-module="metrics"],
+    .module-card[data-module="dlqs"],
+    .module-card[data-module="actions"] {
+        grid-column: span 1;
     }
     
+    /* Matrix still takes full width */
     .module-card[data-module="matrix"] {
         grid-column: span 2;
     }
