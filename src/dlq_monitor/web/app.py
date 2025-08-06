@@ -229,6 +229,18 @@ def dashboard_summary():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/api/status')
+def get_status():
+    """Get comprehensive system status for LPD Hive dashboard"""
+    return jsonify({
+        'dlqs': mcp_service.get_dlq_queues(),
+        'agents': get_agent_status(),
+        'prs': mcp_service.get_github_prs(),
+        'investigations': investigation_tracker.get_active_investigations(),
+        'stats': get_system_stats(),
+        'timestamp': datetime.now().isoformat()
+    })
+
 @app.route('/api/dlqs')
 def get_dlqs():
     """Get all DLQ queues with details"""
@@ -361,6 +373,64 @@ def handle_update_request():
     
     investigations = investigation_tracker.get_active_investigations()
     emit('investigation_update', investigations)
+
+def get_agent_status():
+    """Get status of all agents"""
+    return {
+        'investigator': {
+            'name': 'Investigation Agent',
+            'status': 'idle',
+            'lastActivity': None,
+            'currentTask': None
+        },
+        'analyzer': {
+            'name': 'DLQ Analyzer', 
+            'status': 'idle',
+            'lastActivity': None,
+            'currentTask': None
+        },
+        'debugger': {
+            'name': 'Code Debugger',
+            'status': 'idle', 
+            'lastActivity': None,
+            'currentTask': None
+        },
+        'reviewer': {
+            'name': 'Code Reviewer',
+            'status': 'idle',
+            'lastActivity': None,
+            'currentTask': None
+        }
+    }
+
+def get_system_stats():
+    """Get system statistics"""
+    try:
+        dlqs = mcp_service.get_dlq_queues()
+        total_messages = sum(dlq['messages'] for dlq in dlqs)
+        
+        # Get today's investigations from sessions
+        sessions = investigation_tracker.load_sessions()
+        today = datetime.now().date()
+        today_investigations = sum(
+            1 for inv in sessions.values()
+            if datetime.fromisoformat(inv['start_time']).date() == today
+        )
+        
+        return {
+            'messagesProcessed': total_messages,
+            'investigationsToday': today_investigations,
+            'prsCreated': len(mcp_service.get_github_prs()),
+            'issuesResolved': 0  # TODO: Track resolved issues
+        }
+    except Exception as e:
+        logger.error(f"Error getting system stats: {e}")
+        return {
+            'messagesProcessed': 0,
+            'investigationsToday': 0,
+            'prsCreated': 0,
+            'issuesResolved': 0
+        }
 
 if __name__ == '__main__':
     thread = Thread(target=background_monitor)

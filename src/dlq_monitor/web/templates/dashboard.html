@@ -3,188 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DLQ Monitor Dashboard - Real-time AWS Monitoring</title>
+    <title>LPD Digital Hive - DLQ Operations Center</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome Icons -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <!-- Socket.IO -->
-    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
-    <!-- DataTables -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/lpd-hive.css') }}">
+    
+    <!-- Socket.io -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-dark bg-dark">
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-dark fixed-top">
         <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">
-                <i class="fas fa-chart-line"></i> DLQ Monitor Dashboard
-            </span>
+            <div class="navbar-brand d-flex align-items-center">
+                <img src="{{ url_for('static', filename='brand/logo.png') }}" alt="LPD Digital Hive" height="32" class="me-3">
+                <span class="brand-text">DLQ Operations Center</span>
+            </div>
             <div class="d-flex align-items-center">
-                <span class="badge bg-success me-3" id="connection-status">
-                    <i class="fas fa-circle"></i> Connected
-                </span>
-                <button class="btn btn-outline-light btn-sm" onclick="toggleTheme()">
-                    <i class="fas fa-moon" id="theme-icon"></i>
-                </button>
+                <div class="status-indicator me-3">
+                    <span class="badge bg-success pulse" id="connection-status">
+                        <i class="fas fa-circle"></i> Connected
+                    </span>
+                </div>
+                <div class="text-light me-3">
+                    <small>Region: <span class="text-orange">sa-east-1</span></small>
+                </div>
+                <div class="text-light">
+                    <small>Last Update: <span id="last-update" class="text-orange">--:--:--</span></small>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Main Dashboard Container -->
-    <div class="container-fluid mt-3">
-        <!-- Summary Cards Row -->
-        <div class="row mb-4">
-            <div class="col-md-2">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Total DLQs</h5>
-                        <h2 class="text-primary" id="total-dlqs">0</h2>
-                        <small class="text-muted">Active Queues</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Total Messages</h5>
-                        <h2 class="text-warning" id="total-messages">0</h2>
-                        <small class="text-muted">In All DLQs</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Alert Queues</h5>
-                        <h2 class="text-danger" id="alert-queues">0</h2>
-                        <small class="text-muted">Need Attention</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Active PRs</h5>
-                        <h2 class="text-info" id="active-prs">0</h2>
-                        <small class="text-muted">Open PRs</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Investigations</h5>
-                        <h2 class="text-success" id="active-investigations">0</h2>
-                        <small class="text-muted">Running</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-2">
-                <div class="card text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Last Update</h5>
-                        <h4 id="last-update">--:--:--</h4>
-                        <small class="text-muted">Auto-refresh: 5s</small>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <div class="container-fluid h-100">
+            <div class="row h-100">
+                <!-- Left Panel: Agent Status & Activities -->
+                <div class="col-lg-4 h-100">
+                    <div class="panel h-100">
+                        <div class="panel-header">
+                            <h5><i class="fas fa-robot text-orange"></i> Active Agents</h5>
+                            <span class="badge bg-orange" id="agent-count">0</span>
+                        </div>
+                        <div class="panel-body" id="agents-panel">
+                            <!-- Agent Cards -->
+                            <div class="agent-card" id="investigator-agent">
+                                <div class="agent-header">
+                                    <div class="agent-icon">
+                                        <i class="fas fa-search"></i>
+                                    </div>
+                                    <div class="agent-info">
+                                        <h6>Investigation Agent</h6>
+                                        <span class="agent-status" data-status="idle">
+                                            <i class="fas fa-circle"></i> Idle
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="agent-details">
+                                    <small class="text-muted">Last Activity: <span class="last-activity">Never</span></small>
+                                    <div class="agent-task mt-2 d-none">
+                                        <small class="text-orange">Current Task:</small>
+                                        <div class="task-description"></div>
+                                    </div>
+                                </div>
+                            </div>
 
-        <!-- Main Content Row -->
-        <div class="row">
-            <!-- DLQ Status Panel -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-danger text-white">
-                        <h5><i class="fas fa-exclamation-triangle"></i> DLQ Status</h5>
+                            <div class="agent-card" id="analyzer-agent">
+                                <div class="agent-header">
+                                    <div class="agent-icon">
+                                        <i class="fas fa-microscope"></i>
+                                    </div>
+                                    <div class="agent-info">
+                                        <h6>DLQ Analyzer</h6>
+                                        <span class="agent-status" data-status="idle">
+                                            <i class="fas fa-circle"></i> Idle
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="agent-details">
+                                    <small class="text-muted">Last Activity: <span class="last-activity">Never</span></small>
+                                    <div class="agent-task mt-2 d-none">
+                                        <small class="text-orange">Current Task:</small>
+                                        <div class="task-description"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="agent-card" id="debugger-agent">
+                                <div class="agent-header">
+                                    <div class="agent-icon">
+                                        <i class="fas fa-bug"></i>
+                                    </div>
+                                    <div class="agent-info">
+                                        <h6>Code Debugger</h6>
+                                        <span class="agent-status" data-status="idle">
+                                            <i class="fas fa-circle"></i> Idle
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="agent-details">
+                                    <small class="text-muted">Last Activity: <span class="last-activity">Never</span></small>
+                                    <div class="agent-task mt-2 d-none">
+                                        <small class="text-orange">Current Task:</small>
+                                        <div class="task-description"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="agent-card" id="reviewer-agent">
+                                <div class="agent-header">
+                                    <div class="agent-icon">
+                                        <i class="fas fa-check-double"></i>
+                                    </div>
+                                    <div class="agent-info">
+                                        <h6>Code Reviewer</h6>
+                                        <span class="agent-status" data-status="idle">
+                                            <i class="fas fa-circle"></i> Idle
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="agent-details">
+                                    <small class="text-muted">Last Activity: <span class="last-activity">Never</span></small>
+                                    <div class="agent-task mt-2 d-none">
+                                        <small class="text-orange">Current Task:</small>
+                                        <div class="task-description"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table id="dlq-table" class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Queue Name</th>
-                                        <th>Messages</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="dlq-tbody">
-                                    <!-- Populated by JavaScript -->
-                                </tbody>
-                            </table>
+                </div>
+
+                <!-- Center Panel: DLQ Monitoring & Analysis -->
+                <div class="col-lg-4 h-100">
+                    <!-- DLQ Status Overview -->
+                    <div class="panel mb-3" style="height: 48%;">
+                        <div class="panel-header">
+                            <h5><i class="fas fa-exclamation-triangle text-orange"></i> DLQ Status</h5>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-danger me-2" id="critical-count">0</span>
+                                <span class="badge bg-warning me-2" id="warning-count">0</span>
+                                <span class="badge bg-success" id="healthy-count">0</span>
+                            </div>
+                        </div>
+                        <div class="panel-body" id="dlq-status-panel">
+                            <div class="dlq-list">
+                                <!-- DLQ items will be dynamically added here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Investigations -->
+                    <div class="panel" style="height: 48%;">
+                        <div class="panel-header">
+                            <h5><i class="fas fa-flask text-orange"></i> Active Investigations</h5>
+                            <span class="badge bg-orange" id="investigation-count">0</span>
+                        </div>
+                        <div class="panel-body" id="investigations-panel">
+                            <div class="investigation-list">
+                                <!-- Investigation items will be dynamically added here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Pull Requests & Actions -->
+                <div class="col-lg-4 h-100">
+                    <!-- Pull Requests -->
+                    <div class="panel mb-3" style="height: 48%;">
+                        <div class="panel-header">
+                            <h5><i class="fab fa-github text-orange"></i> Pull Requests</h5>
+                            <span class="badge bg-orange" id="pr-count">0</span>
+                        </div>
+                        <div class="panel-body" id="pr-panel">
+                            <div class="pr-list">
+                                <!-- PR items will be dynamically added here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Actions & Timeline -->
+                    <div class="panel" style="height: 48%;">
+                        <div class="panel-header">
+                            <h5><i class="fas fa-history text-orange"></i> Recent Actions</h5>
+                        </div>
+                        <div class="panel-body" id="actions-panel">
+                            <div class="timeline">
+                                <!-- Timeline items will be dynamically added here -->
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Real-time Chart -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h5><i class="fas fa-chart-area"></i> Message Trends</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="message-chart" height="150"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Second Row -->
-        <div class="row mt-4">
-            <!-- GitHub PRs Panel -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-info text-white">
-                        <h5><i class="fab fa-github"></i> GitHub Pull Requests</h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="pr-list" class="list-group">
-                            <!-- Populated by JavaScript -->
+            <!-- Bottom Stats Bar -->
+            <div class="stats-bar">
+                <div class="container-fluid">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <div class="stat-item">
+                                <span class="stat-label">Messages Processed</span>
+                                <span class="stat-value" id="messages-processed">0</span>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Active Investigations -->
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header bg-success text-white">
-                        <h5><i class="fas fa-robot"></i> Claude Investigations</h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="investigation-list" class="list-group">
-                            <!-- Populated by JavaScript -->
+                        <div class="col-auto">
+                            <div class="stat-item">
+                                <span class="stat-label">Investigations Today</span>
+                                <span class="stat-value" id="investigations-today">0</span>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- CloudWatch Logs Row -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-secondary text-white">
-                        <h5><i class="fas fa-file-alt"></i> CloudWatch Logs</h5>
-                        <button class="btn btn-sm btn-light float-end" onclick="refreshLogs()">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div class="log-viewer" id="log-viewer">
-                            <!-- Populated by JavaScript -->
+                        <div class="col-auto">
+                            <div class="stat-item">
+                                <span class="stat-label">PRs Created</span>
+                                <span class="stat-value" id="prs-created">0</span>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="stat-item">
+                                <span class="stat-label">Issues Resolved</span>
+                                <span class="stat-value" id="issues-resolved">0</span>
+                            </div>
+                        </div>
+                        <div class="col-auto ms-auto">
+                            <div class="hexagon-pattern">
+                                <img src="{{ url_for('static', filename='brand/symbol.png') }}" alt="LPD Hive" height="40">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -192,24 +242,17 @@
         </div>
     </div>
 
-    <!-- Investigation Modal -->
-    <div class="modal fade" id="investigationModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Start Investigation</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Start Claude AI investigation for <strong id="modal-dlq-name"></strong>?</p>
-                    <p class="text-muted">This will trigger an automated analysis and potentially create a PR with fixes.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="confirmInvestigation()">
-                        <i class="fas fa-play"></i> Start Investigation
-                    </button>
-                </div>
+    <!-- Alert Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="margin-top: 80px;">
+        <div id="alert-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <i class="fas fa-bell text-orange me-2"></i>
+                <strong class="me-auto">System Alert</strong>
+                <small class="text-muted">just now</small>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                <!-- Alert message will be inserted here -->
             </div>
         </div>
     </div>

@@ -1,31 +1,31 @@
-// Enhanced DLQ Dashboard JavaScript
-// Real-time monitoring with WebSocket and interactive features
+// LPD Digital Hive - DLQ Operations Center Dashboard
+// Real-time monitoring with WebSocket and agent tracking
 
 // Global variables
 let socket;
-let messageChart;
-let dlqData = [];
-let chartData = {
-    labels: [],
-    datasets: [{
-        label: 'Total Messages',
-        data: [],
-        borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        tension: 0.4
-    }]
+let agents = {
+    investigator: { status: 'idle', lastActivity: null, currentTask: null },
+    analyzer: { status: 'idle', lastActivity: null, currentTask: null },
+    debugger: { status: 'idle', lastActivity: null, currentTask: null },
+    reviewer: { status: 'idle', lastActivity: null, currentTask: null }
 };
-let selectedDLQ = null;
-let theme = localStorage.getItem('theme') || 'light';
+let dlqData = [];
+let investigations = [];
+let pullRequests = [];
+let recentActions = [];
+let stats = {
+    messagesProcessed: 0,
+    investigationsToday: 0,
+    prsCreated: 0,
+    issuesResolved: 0
+};
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     initializeWebSocket();
-    initializeChart();
     loadInitialData();
-    setupEventListeners();
-    applyTheme();
     startClock();
+    initializeToasts();
 });
 
 // WebSocket initialization
@@ -35,483 +35,404 @@ function initializeWebSocket() {
     socket.on('connect', function() {
         console.log('Connected to WebSocket');
         updateConnectionStatus(true);
+        addToTimeline('System connected to monitoring service');
     });
     
     socket.on('disconnect', function() {
         console.log('Disconnected from WebSocket');
         updateConnectionStatus(false);
+        addToTimeline('System disconnected from monitoring service');
     });
     
+    // DLQ Updates
     socket.on('dlq_update', function(data) {
-        updateDLQTable(data);
-        updateSummaryCards(data);
-        updateChart(data);
+        updateDLQStatus(data);
+        updateStats(data);
     });
     
-    socket.on('pr_update', function(data) {
-        updatePRList(data);
+    // Agent Updates
+    socket.on('agent_update', function(data) {
+        updateAgentStatus(data);
     });
     
+    // Investigation Updates
     socket.on('investigation_update', function(data) {
-        updateInvestigationList(data);
+        updateInvestigations(data);
     });
-}
-
-// Initialize Chart.js
-function initializeChart() {
-    const ctx = document.getElementById('message-chart').getContext('2d');
-    messageChart = new Chart(ctx, {
-        type: 'line',
-        data: chartData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top'
-                },
-                title: {
-                    display: false
-                }
-            },
-            scales: {
-                x: {
-                    display: true,
-                    title: {
-                        display: true,
-                        text: 'Time'
-                    }
-                },
-                y: {
-                    display: true,
-                    title: {
-                        display: true,
-                        text: 'Messages'
-                    },
-                    beginAtZero: true
-                }
-            },
-            animation: {
-                duration: 750
-            }
-        }
+    
+    // PR Updates
+    socket.on('pr_update', function(data) {
+        updatePullRequests(data);
+    });
+    
+    // Alert Messages
+    socket.on('alert', function(data) {
+        showAlert(data.message, data.type);
     });
 }
 
 // Load initial data
-async function loadInitialData() {
-    try {
-        // Load summary
-        const summaryResponse = await fetch('/api/dashboard/summary');
-        const summaryData = await summaryResponse.json();
-        updateSummaryFromData(summaryData.summary);
-        
-        // Load DLQs
-        const dlqResponse = await fetch('/api/dlqs');
-        const dlqData = await dlqResponse.json();
-        updateDLQTable(dlqData);
-        updateChart(dlqData);
-        
-        // Load PRs
-        const prResponse = await fetch('/api/github/prs');
-        const prData = await prResponse.json();
-        updatePRList(prData);
-        
-        // Load Investigations
-        const invResponse = await fetch('/api/investigations');
-        const invData = await invResponse.json();
-        updateInvestigationList(invData);
-        
-        // Load CloudWatch logs
-        refreshLogs();
-    } catch (error) {
-        console.error('Error loading initial data:', error);
-    }
-}
-
-// Update DLQ table
-function updateDLQTable(data) {
-    dlqData = data;
-    const tbody = document.getElementById('dlq-tbody');
-    tbody.innerHTML = '';
-    
-    data.forEach(dlq => {
-        const row = document.createElement('tr');
-        row.className = 'fade-in';
-        
-        const statusBadge = dlq.messages > 0 
-            ? `<span class="badge badge-status-alert">Alert</span>`
-            : `<span class="badge badge-status-ok">OK</span>`;
-        
-        const messageClass = dlq.messages > 0 ? 'text-danger fw-bold' : 'text-success';
-        
-        row.innerHTML = `
-            <td>${dlq.name}</td>
-            <td class="${messageClass}">${dlq.messages}</td>
-            <td>${statusBadge}</td>
-            <td>
-                <button class="btn btn-sm btn-primary btn-investigate" 
-                        onclick="startInvestigation('${dlq.name}')"
-                        ${dlq.messages === 0 ? 'disabled' : ''}>
-                    <i class="fas fa-search"></i> Investigate
-                </button>
-                <button class="btn btn-sm btn-info" 
-                        onclick="viewMessages('${dlq.name}')">
-                    <i class="fas fa-eye"></i> View
-                </button>
-            </td>
-        `;
-        
-        tbody.appendChild(row);
-    });
-    
-    // Initialize or reinitialize DataTable
-    if ($.fn.DataTable.isDataTable('#dlq-table')) {
-        $('#dlq-table').DataTable().destroy();
-    }
-    
-    $('#dlq-table').DataTable({
-        pageLength: 10,
-        order: [[1, 'desc']],
-        responsive: true
-    });
-}
-
-// Update summary cards
-function updateSummaryCards(dlqData) {
-    const totalMessages = dlqData.reduce((sum, dlq) => sum + dlq.messages, 0);
-    const alertQueues = dlqData.filter(dlq => dlq.messages > 0).length;
-    
-    document.getElementById('total-dlqs').textContent = dlqData.length;
-    document.getElementById('total-messages').textContent = totalMessages;
-    document.getElementById('alert-queues').textContent = alertQueues;
-    
-    // Add animation effect
-    ['total-dlqs', 'total-messages', 'alert-queues'].forEach(id => {
-        document.getElementById(id).classList.add('alert-flash');
-        setTimeout(() => {
-            document.getElementById(id).classList.remove('alert-flash');
-        }, 500);
-    });
-}
-
-// Update summary from API data
-function updateSummaryFromData(summary) {
-    document.getElementById('total-dlqs').textContent = summary.totalDLQs || 0;
-    document.getElementById('total-messages').textContent = summary.totalMessages || 0;
-    document.getElementById('alert-queues').textContent = summary.alertQueues || 0;
-    document.getElementById('active-prs').textContent = summary.activePRs || 0;
-    document.getElementById('active-investigations').textContent = summary.activeInvestigations || 0;
-}
-
-// Update chart with new data
-function updateChart(dlqData) {
-    const now = new Date().toLocaleTimeString();
-    const totalMessages = dlqData.reduce((sum, dlq) => sum + dlq.messages, 0);
-    
-    // Add new data point
-    if (chartData.labels.length > 20) {
-        chartData.labels.shift();
-        chartData.datasets[0].data.shift();
-    }
-    
-    chartData.labels.push(now);
-    chartData.datasets[0].data.push(totalMessages);
-    
-    // Add individual DLQ datasets if not too many
-    if (dlqData.length <= 5 && dlqData.length > 0) {
-        // Clear existing datasets except the total
-        chartData.datasets = [chartData.datasets[0]];
-        
-        dlqData.forEach((dlq, index) => {
-            let dataset = chartData.datasets.find(d => d.label === dlq.name);
-            if (!dataset) {
-                const colors = [
-                    'rgb(255, 99, 132)',
-                    'rgb(54, 162, 235)',
-                    'rgb(255, 206, 86)',
-                    'rgb(75, 192, 192)',
-                    'rgb(153, 102, 255)'
-                ];
-                dataset = {
-                    label: dlq.name,
-                    data: new Array(chartData.labels.length - 1).fill(0),
-                    borderColor: colors[index % colors.length],
-                    backgroundColor: colors[index % colors.length].replace('rgb', 'rgba').replace(')', ', 0.2)'),
-                    tension: 0.4
-                };
-                chartData.datasets.push(dataset);
-            }
-            dataset.data.push(dlq.messages);
+function loadInitialData() {
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.dlqs) updateDLQStatus(data.dlqs);
+            if (data.agents) updateAllAgents(data.agents);
+            if (data.investigations) updateInvestigations(data.investigations);
+            if (data.prs) updatePullRequests(data.prs);
+            if (data.stats) updateStats(data.stats);
+        })
+        .catch(error => {
+            console.error('Error loading initial data:', error);
+            showAlert('Failed to load initial data', 'error');
         });
-    }
-    
-    messageChart.update();
 }
 
-// Update PR list
-function updatePRList(prs) {
-    const prList = document.getElementById('pr-list');
-    prList.innerHTML = '';
+// Update Agent Status
+function updateAgentStatus(agentData) {
+    const agentId = agentData.id;
+    const agentCard = document.getElementById(`${agentId}-agent`);
     
-    if (prs.length === 0) {
-        prList.innerHTML = '<div class="text-muted">No open PRs</div>';
-        return;
+    if (!agentCard) return;
+    
+    // Update agent object
+    if (agents[agentId]) {
+        agents[agentId] = { ...agents[agentId], ...agentData };
     }
+    
+    // Update UI
+    const statusElement = agentCard.querySelector('.agent-status');
+    const lastActivityElement = agentCard.querySelector('.last-activity');
+    const taskElement = agentCard.querySelector('.agent-task');
+    const taskDescription = agentCard.querySelector('.task-description');
+    
+    // Update status
+    statusElement.setAttribute('data-status', agentData.status);
+    statusElement.innerHTML = `<i class="fas fa-circle"></i> ${capitalizeFirst(agentData.status)}`;
+    
+    // Update last activity
+    if (agentData.lastActivity) {
+        lastActivityElement.textContent = formatTime(agentData.lastActivity);
+    }
+    
+    // Update current task
+    if (agentData.currentTask) {
+        taskElement.classList.remove('d-none');
+        taskDescription.textContent = agentData.currentTask;
+    } else {
+        taskElement.classList.add('d-none');
+    }
+    
+    // Update agent count
+    updateAgentCount();
+    
+    // Add to timeline
+    if (agentData.status === 'active') {
+        addToTimeline(`${agentData.name} started: ${agentData.currentTask}`);
+    }
+}
+
+// Update all agents at once
+function updateAllAgents(agentsData) {
+    Object.keys(agentsData).forEach(agentId => {
+        updateAgentStatus({ id: agentId, ...agentsData[agentId] });
+    });
+}
+
+// Update DLQ Status
+function updateDLQStatus(dlqs) {
+    dlqData = dlqs;
+    const dlqPanel = document.getElementById('dlq-status-panel');
+    const dlqList = dlqPanel.querySelector('.dlq-list');
+    
+    // Clear existing items
+    dlqList.innerHTML = '';
+    
+    // Count by status
+    let critical = 0, warning = 0, healthy = 0;
+    
+    dlqs.forEach(dlq => {
+        const status = getDLQStatus(dlq.messages);
+        if (status === 'critical') critical++;
+        else if (status === 'warning') warning++;
+        else healthy++;
+        
+        const dlqItem = createDLQItem(dlq, status);
+        dlqList.appendChild(dlqItem);
+    });
+    
+    // Update counters
+    document.getElementById('critical-count').textContent = critical;
+    document.getElementById('warning-count').textContent = warning;
+    document.getElementById('healthy-count').textContent = healthy;
+}
+
+// Create DLQ Item element
+function createDLQItem(dlq, status) {
+    const div = document.createElement('div');
+    div.className = `dlq-item ${status}`;
+    div.innerHTML = `
+        <div>
+            <div class="dlq-name">${dlq.name}</div>
+            <small class="text-muted">${dlq.region || 'sa-east-1'}</small>
+        </div>
+        <div class="dlq-messages">
+            <span class="message-count text-${getStatusColor(status)}">${dlq.messages}</span>
+            <small class="text-muted">msgs</small>
+        </div>
+    `;
+    
+    // Add click handler for investigation
+    if (status !== 'healthy') {
+        div.style.cursor = 'pointer';
+        div.onclick = () => startInvestigation(dlq);
+    }
+    
+    return div;
+}
+
+// Update Investigations
+function updateInvestigations(investigationsData) {
+    investigations = investigationsData;
+    const panel = document.getElementById('investigations-panel');
+    const list = panel.querySelector('.investigation-list');
+    
+    // Clear existing
+    list.innerHTML = '';
+    
+    // Update count
+    document.getElementById('investigation-count').textContent = investigationsData.length;
+    
+    investigationsData.forEach(inv => {
+        const item = createInvestigationItem(inv);
+        list.appendChild(item);
+    });
+}
+
+// Create Investigation Item
+function createInvestigationItem(inv) {
+    const div = document.createElement('div');
+    div.className = 'investigation-item';
+    div.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <div class="fw-semibold">${inv.dlq}</div>
+                <small class="text-muted">${inv.agent} • Started ${formatTime(inv.startTime)}</small>
+            </div>
+            <div class="text-orange">
+                <i class="fas fa-spinner fa-spin"></i>
+            </div>
+        </div>
+        <div class="investigation-progress mt-2">
+            <div class="investigation-progress-bar" style="width: ${inv.progress || 0}%"></div>
+        </div>
+    `;
+    return div;
+}
+
+// Update Pull Requests
+function updatePullRequests(prs) {
+    pullRequests = prs;
+    const panel = document.getElementById('pr-panel');
+    const list = panel.querySelector('.pr-list');
+    
+    // Clear existing
+    list.innerHTML = '';
+    
+    // Update count
+    document.getElementById('pr-count').textContent = prs.length;
     
     prs.forEach(pr => {
-        const prItem = document.createElement('div');
-        prItem.className = 'pr-item fade-in';
-        
-        const created = new Date(pr.created).toLocaleDateString();
-        
-        prItem.innerHTML = `
-            <div>
-                <a href="${pr.url}" target="_blank" class="pr-title">
-                    #${pr.number} - ${pr.title}
-                </a>
-                <div class="pr-meta">
-                    <i class="fas fa-code-branch"></i> ${pr.repo} | 
-                    <i class="fas fa-user"></i> ${pr.author} | 
-                    <i class="fas fa-calendar"></i> ${created}
-                </div>
-            </div>
-        `;
-        
-        prList.appendChild(prItem);
+        const item = createPRItem(pr);
+        list.appendChild(item);
+    });
+}
+
+// Create PR Item
+function createPRItem(pr) {
+    const div = document.createElement('div');
+    div.className = 'pr-item';
+    div.innerHTML = `
+        <div class="pr-status ${pr.status}"></div>
+        <div class="flex-grow-1">
+            <div class="fw-semibold">#${pr.number}: ${pr.title}</div>
+            <small class="text-muted">${pr.author} • ${formatTime(pr.createdAt)}</small>
+        </div>
+        <i class="fas fa-external-link-alt text-muted"></i>
+    `;
+    
+    div.onclick = () => window.open(pr.url, '_blank');
+    return div;
+}
+
+// Add to Timeline
+function addToTimeline(message) {
+    const timeline = document.querySelector('.timeline');
+    if (!timeline) return;
+    
+    // Add to recent actions array
+    recentActions.unshift({
+        time: new Date(),
+        message: message
     });
     
-    // Update PR count
-    document.getElementById('active-prs').textContent = prs.length;
-}
-
-// Update investigation list
-function updateInvestigationList(investigations) {
-    const invList = document.getElementById('investigation-list');
-    invList.innerHTML = '';
-    
-    if (investigations.length === 0) {
-        invList.innerHTML = '<div class="text-muted">No active investigations</div>';
-        return;
+    // Keep only last 10 actions
+    if (recentActions.length > 10) {
+        recentActions.pop();
     }
     
-    investigations.forEach(inv => {
-        const invItem = document.createElement('div');
-        invItem.className = 'investigation-item fade-in';
-        
-        const startTime = new Date(inv.startTime).toLocaleTimeString();
-        
-        invItem.innerHTML = `
-            <div>
-                <span class="investigation-status"></span>
-                <strong>${inv.dlq}</strong> - Investigation #${inv.id}
-                <div class="text-muted small">
-                    <i class="fas fa-clock"></i> Started: ${startTime} | 
-                    <i class="fas fa-microchip"></i> PID: ${inv.pid} | 
-                    Status: ${inv.status}
-                </div>
-            </div>
+    // Rebuild timeline
+    timeline.innerHTML = '';
+    recentActions.forEach(action => {
+        const item = document.createElement('div');
+        item.className = 'timeline-item';
+        item.innerHTML = `
+            <div class="timeline-time">${formatTime(action.time)}</div>
+            <div class="timeline-content">${action.message}</div>
         `;
-        
-        invList.appendChild(invItem);
+        timeline.appendChild(item);
     });
-    
-    // Update investigation count
-    document.getElementById('active-investigations').textContent = investigations.length;
 }
 
-// Start investigation
-function startInvestigation(dlqName) {
-    selectedDLQ = dlqName;
-    document.getElementById('modal-dlq-name').textContent = dlqName;
-    const modal = new bootstrap.Modal(document.getElementById('investigationModal'));
-    modal.show();
-}
-
-// Confirm investigation
-async function confirmInvestigation() {
-    if (!selectedDLQ) return;
-    
-    try {
-        const response = await fetch('/api/investigations/start', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ dlq_name: selectedDLQ })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            showNotification('Investigation started successfully', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('investigationModal')).hide();
-            
-            // Request update
-            socket.emit('request_update');
-        } else {
-            showNotification('Failed to start investigation: ' + data.error, 'danger');
-        }
-    } catch (error) {
-        showNotification('Error starting investigation', 'danger');
-        console.error('Error:', error);
+// Update Stats
+function updateStats(data) {
+    if (data.messagesProcessed !== undefined) {
+        document.getElementById('messages-processed').textContent = data.messagesProcessed;
+        stats.messagesProcessed = data.messagesProcessed;
+    }
+    if (data.investigationsToday !== undefined) {
+        document.getElementById('investigations-today').textContent = data.investigationsToday;
+        stats.investigationsToday = data.investigationsToday;
+    }
+    if (data.prsCreated !== undefined) {
+        document.getElementById('prs-created').textContent = data.prsCreated;
+        stats.prsCreated = data.prsCreated;
+    }
+    if (data.issuesResolved !== undefined) {
+        document.getElementById('issues-resolved').textContent = data.issuesResolved;
+        stats.issuesResolved = data.issuesResolved;
     }
 }
 
-// View DLQ messages
-async function viewMessages(dlqName) {
-    try {
-        const response = await fetch(`/api/dlqs/${dlqName}/messages`);
-        const messages = await response.json();
-        
-        // Display messages in log viewer temporarily
-        const logViewer = document.getElementById('log-viewer');
-        logViewer.innerHTML = `<h5>Messages from ${dlqName}:</h5>`;
-        
-        if (messages.length === 0) {
-            logViewer.innerHTML += '<div class="text-muted">No messages in queue</div>';
-        } else {
-            messages.forEach(msg => {
-                const msgDiv = document.createElement('div');
-                msgDiv.className = 'log-entry';
-                msgDiv.innerHTML = `
-                    <span class="log-timestamp">${msg.id}</span>
-                    <pre>${JSON.stringify(msg.body, null, 2)}</pre>
-                `;
-                logViewer.appendChild(msgDiv);
-            });
-        }
-        
-        // Scroll to log viewer
-        logViewer.scrollIntoView({ behavior: 'smooth' });
-    } catch (error) {
-        console.error('Error fetching messages:', error);
-        showNotification('Failed to fetch messages', 'danger');
-    }
-}
-
-// Refresh CloudWatch logs
-async function refreshLogs() {
-    try {
-        const response = await fetch('/api/cloudwatch/logs');
-        const logs = await response.json();
-        
-        const logViewer = document.getElementById('log-viewer');
-        logViewer.innerHTML = '';
-        
-        if (logs.length === 0) {
-            logViewer.innerHTML = '<div class="text-muted">No recent logs</div>';
-        } else {
-            logs.forEach(log => {
-                const logDiv = document.createElement('div');
-                logDiv.className = 'log-entry';
-                
-                // Determine log level
-                let levelClass = 'log-level-info';
-                if (log.message.includes('ERROR')) levelClass = 'log-level-error';
-                else if (log.message.includes('WARNING')) levelClass = 'log-level-warning';
-                
-                logDiv.innerHTML = `
-                    <span class="log-timestamp">${log.timestamp}</span>
-                    <span class="${levelClass}">${log.message}</span>
-                `;
-                
-                logViewer.appendChild(logDiv);
-            });
-        }
-    } catch (error) {
-        console.error('Error fetching logs:', error);
-    }
-}
-
-// Update connection status
+// Update Connection Status
 function updateConnectionStatus(connected) {
     const statusBadge = document.getElementById('connection-status');
     if (connected) {
+        statusBadge.className = 'badge bg-success pulse';
         statusBadge.innerHTML = '<i class="fas fa-circle"></i> Connected';
-        statusBadge.className = 'badge bg-success me-3 connected';
     } else {
-        statusBadge.innerHTML = '<i class="fas fa-exclamation-circle"></i> Disconnected';
-        statusBadge.className = 'badge bg-danger me-3 disconnected';
+        statusBadge.className = 'badge bg-danger';
+        statusBadge.innerHTML = '<i class="fas fa-circle"></i> Disconnected';
     }
 }
 
-// Theme toggle
-function toggleTheme() {
-    theme = theme === 'light' ? 'dark' : 'light';
-    localStorage.setItem('theme', theme);
-    applyTheme();
+// Update Agent Count
+function updateAgentCount() {
+    const activeAgents = Object.values(agents).filter(a => a.status !== 'idle').length;
+    document.getElementById('agent-count').textContent = activeAgents;
 }
 
-function applyTheme() {
-    const body = document.body;
-    const icon = document.getElementById('theme-icon');
+// Start Investigation
+function startInvestigation(dlq) {
+    socket.emit('start_investigation', {
+        dlq: dlq.name,
+        messages: dlq.messages
+    });
     
-    if (theme === 'dark') {
-        body.classList.add('dark-theme');
-        icon.className = 'fas fa-sun';
-    } else {
-        body.classList.remove('dark-theme');
-        icon.className = 'fas fa-moon';
-    }
+    showAlert(`Investigation started for ${dlq.name}`, 'info');
+    addToTimeline(`Manual investigation triggered for ${dlq.name}`);
 }
 
-// Show notification
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
-    notification.style.zIndex = '9999';
-    notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
+// Show Alert Toast
+function showAlert(message, type = 'info') {
+    const toast = document.getElementById('alert-toast');
+    const toastBody = toast.querySelector('.toast-body');
     
-    document.body.appendChild(notification);
+    // Set message
+    toastBody.textContent = message;
     
-    setTimeout(() => {
-        notification.remove();
-    }, 5000);
+    // Set color based on type
+    toast.className = `toast border-${type === 'error' ? 'danger' : type}`;
+    
+    // Show toast
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
 }
 
-// Start clock
+// Initialize Toasts
+function initializeToasts() {
+    const toastElList = [].slice.call(document.querySelectorAll('.toast'));
+    toastElList.map(function (toastEl) {
+        return new bootstrap.Toast(toastEl);
+    });
+}
+
+// Start Clock
 function startClock() {
-    function updateClock() {
-        const now = new Date();
-        document.getElementById('last-update').textContent = now.toLocaleTimeString();
-    }
-    
     updateClock();
     setInterval(updateClock, 1000);
 }
 
-// Setup event listeners
-function setupEventListeners() {
-    // Refresh button
-    window.refreshLogs = refreshLogs;
-    
-    // Keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'r' && e.ctrlKey) {
-            e.preventDefault();
-            socket.emit('request_update');
-            showNotification('Refreshing data...', 'info');
-        }
-        if (e.key === 't' && e.ctrlKey) {
-            e.preventDefault();
-            toggleTheme();
-        }
+// Update Clock
+function updateClock() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', { 
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
     });
     
-    // Auto-refresh every 30 seconds
-    setInterval(() => {
-        socket.emit('request_update');
-    }, 30000);
+    const lastUpdate = document.getElementById('last-update');
+    if (lastUpdate) {
+        lastUpdate.textContent = timeString;
+    }
 }
 
-// Export functions for global access
-window.startInvestigation = startInvestigation;
-window.confirmInvestigation = confirmInvestigation;
-window.viewMessages = viewMessages;
-window.refreshLogs = refreshLogs;
-window.toggleTheme = toggleTheme;
+// Utility Functions
+function getDLQStatus(messageCount) {
+    if (messageCount >= 100) return 'critical';
+    if (messageCount >= 10) return 'warning';
+    return 'healthy';
+}
+
+function getStatusColor(status) {
+    switch(status) {
+        case 'critical': return 'danger';
+        case 'warning': return 'warning';
+        case 'healthy': return 'success';
+        default: return 'secondary';
+    }
+}
+
+function formatTime(timestamp) {
+    if (!timestamp) return 'Never';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now - date;
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    
+    return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function capitalizeFirst(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Export for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        updateAgentStatus,
+        updateDLQStatus,
+        formatTime
+    };
+}

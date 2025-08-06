@@ -10,6 +10,15 @@
 
 ## 🌟 Features
 
+### 🎨 **LPD Digital Hive Web Dashboard** (NEW!)
+- Professional dark-themed web interface with orange branding
+- Real-time agent status tracking and monitoring
+- WebSocket-powered live updates
+- DLQ operations center with critical/warning/healthy status
+- Pull request tracking and recent actions timeline
+- Bootstrap 5 + Chart.js visualizations
+- Runs locally on http://localhost:5001
+
 ### 🤖 **Auto-Investigation with Claude AI & MCP Tools**
 - Automatically triggers Claude Code when DLQs receive messages
 - Multi-agent architecture with Google ADK framework
@@ -22,7 +31,7 @@
 - Creates GitHub PRs with fixes automatically
 - Smart cooldown and timeout management
 
-### 📊 **Enhanced Live Dashboard**
+### 📊 **Terminal Dashboard**
 - Real-time multi-panel monitoring interface
 - Tracks DLQ status, Claude agents, and GitHub PRs
 - Investigation timeline with duration tracking
@@ -82,14 +91,18 @@ export GITHUB_TOKEN=$(gh auth token 2>/dev/null)
 
 ### 4. Start monitoring
 ```bash
-# Production monitoring with auto-investigation
-./start_monitor.sh production
+# LPD Hive Web Dashboard (Recommended)
+./scripts/start_dashboard.sh
+# Open http://localhost:5001 in your browser
 
-# Enhanced dashboard
-./start_monitor.sh enhanced
+# OR Terminal monitoring with auto-investigation
+./scripts/start_monitor.sh production
+
+# OR Enhanced terminal dashboard
+./scripts/start_monitor.sh enhanced
 
 # Test notifications
-./start_monitor.sh notification-test
+./scripts/start_monitor.sh notification-test
 ```
 
 ## 🎯 Usage
@@ -98,13 +111,14 @@ export GITHUB_TOKEN=$(gh auth token 2>/dev/null)
 
 | Command | Description |
 |---------|-------------|
-| `./start_monitor.sh production` | Start production DLQ monitoring |
-| `./start_monitor.sh adk-production` | ADK multi-agent monitoring with MCP tools |
-| `./start_monitor.sh enhanced` | Launch enhanced dashboard |
-| `./start_monitor.sh discover` | Discover all DLQ queues |
-| `./start_monitor.sh test` | Test mode (3 cycles) |
-| `./start_monitor.sh cli monitor` | CLI monitoring interface |
-| `./start_monitor.sh pr-audio-test` | Test PR audio notifications |
+| `./scripts/start_dashboard.sh` | **LPD Hive Web Dashboard** (Recommended) |
+| `./scripts/start_monitor.sh production` | Start production DLQ monitoring |
+| `./scripts/start_monitor.sh adk-production` | ADK multi-agent monitoring with MCP tools |
+| `./scripts/start_monitor.sh enhanced` | Launch enhanced terminal dashboard |
+| `./scripts/start_monitor.sh discover` | Discover all DLQ queues |
+| `./scripts/start_monitor.sh test` | Test mode (3 cycles) |
+| `./scripts/start_monitor.sh cli monitor` | CLI monitoring interface |
+| `./scripts/start_monitor.sh pr-audio-test` | Test PR audio notifications |
 | `python tests/validation/test_adk_simple.py` | Validate ADK system setup |
 
 ### Configuration
