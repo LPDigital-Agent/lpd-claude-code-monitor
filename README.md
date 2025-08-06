@@ -1,6 +1,6 @@
-# 🚀 LPD Claude Code Monitor
+# 🐝 BHiveQ Observability Hub - LPD Digital Hive
 
-> Advanced DLQ monitoring system with Claude AI auto-investigation, PR tracking, and real-time dashboard for AWS SQS Dead Letter Queues
+> Enterprise-grade AWS SQS Dead Letter Queue monitoring with Claude AI multi-agent investigation, automated PR generation, and real-time observability dashboard
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
 [![AWS](https://img.shields.io/badge/AWS-SQS-orange)](https://aws.amazon.com/sqs/)
