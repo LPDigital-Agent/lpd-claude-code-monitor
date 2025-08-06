@@ -125,14 +125,16 @@ function updateLiveMetrics() {
 // Button Handlers
 function toggleSound() {
     neuroState.soundEnabled = !neuroState.soundEnabled;
-    const btn = document.getElementById('btn-sound');
-    const icon = btn.querySelector('i');
+    const btn = document.getElementById('voice-toggle');
+    const icon = btn.querySelector('[data-lucide]');
     
     if (neuroState.soundEnabled) {
-        icon.className = 'lucide lucide-volume-2';
+        icon.setAttribute('data-lucide', 'volume-2');
+        lucide.createIcons();
         showNotification('Sound enabled', 'success');
     } else {
-        icon.className = 'lucide lucide-volume-x';
+        icon.setAttribute('data-lucide', 'volume-x');
+        lucide.createIcons();
         showNotification('Sound muted', 'info');
     }
     
@@ -142,11 +144,12 @@ function toggleSound() {
 
 function toggleNotifications() {
     neuroState.notificationsEnabled = !neuroState.notificationsEnabled;
-    const btn = document.getElementById('btn-notifications');
-    const icon = btn.querySelector('i');
+    const btn = document.getElementById('alerts-toggle');
+    const icon = btn.querySelector('[data-lucide]');
     
     if (neuroState.notificationsEnabled) {
-        icon.className = 'lucide lucide-bell';
+        icon.setAttribute('data-lucide', 'bell');
+        lucide.createIcons();
         showNotification('Notifications enabled', 'success');
         
         // Request permission if needed
@@ -154,7 +157,8 @@ function toggleNotifications() {
             Notification.requestPermission();
         }
     } else {
-        icon.className = 'lucide lucide-bell-off';
+        icon.setAttribute('data-lucide', 'bell-off');
+        lucide.createIcons();
         showNotification('Notifications disabled', 'info');
     }
     
@@ -630,14 +634,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize drag and drop
     initializeDragAndDrop();
     
-    // Setup event listeners
-    const soundBtn = document.getElementById('btn-sound');
+    // Setup event listeners with correct IDs
+    const soundBtn = document.getElementById('voice-toggle');
     if (soundBtn) soundBtn.addEventListener('click', toggleSound);
     
-    const notifBtn = document.getElementById('btn-notifications');
+    const notifBtn = document.getElementById('alerts-toggle');
     if (notifBtn) notifBtn.addEventListener('click', toggleNotifications);
     
-    const settingsBtn = document.getElementById('btn-settings');
+    const settingsBtn = document.getElementById('settings-toggle');
     if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
     
     // Setup timeline filter

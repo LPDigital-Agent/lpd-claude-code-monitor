@@ -264,6 +264,24 @@ class CoordinatorAgent:
         # Database service for NeuroCenter
         self.db_service = get_database_service()
         
+        # Register all agents in database
+        self._register_agents()
+        
+    def _register_agents(self):
+        """Register all agents in the database"""
+        agents = [
+            ('coordinator', 'Coordinator Agent', 'Main orchestrator for all agents', 'coordinator'),
+            ('dlq_monitor', 'DLQ Monitor Agent', 'Monitors AWS SQS DLQs', 'monitor'),
+            ('investigator', 'Investigation Agent', 'Performs root cause analysis', 'investigator'),
+            ('code_fixer', 'Code Fixer Agent', 'Implements fixes for issues', 'fixer'),
+            ('pr_manager', 'PR Manager Agent', 'Creates and manages GitHub PRs', 'manager'),
+            ('notifier', 'Notifier Agent', 'Sends notifications and alerts', 'notifier')
+        ]
+        
+        for agent_id, name, description, agent_type in agents:
+            self.db_service.register_agent(agent_id, name, description, agent_type)
+            self.db_service.update_agent_status(agent_id, 'idle')
+    
     def is_in_cooldown(self, dlq_name: str) -> bool:
         """Check if DLQ is in cooldown period"""
         if dlq_name not in self.cooldowns:
