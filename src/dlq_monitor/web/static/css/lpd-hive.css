@@ -590,6 +590,18 @@ img[alt="LPD Hive"]:before {
     transform: scale(1.05);
 }
 
+.btn-outline-orange.btn-muted {
+    color: var(--text-muted);
+    border-color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.btn-outline-orange.btn-muted:hover {
+    background: var(--text-muted);
+    color: var(--bg-primary);
+    opacity: 1;
+}
+
 /* Agent Activity Indicators */
 .agent-activity-sparkline {
     height: 30px;

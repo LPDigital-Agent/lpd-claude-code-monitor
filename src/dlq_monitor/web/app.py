@@ -26,6 +26,9 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Global voice notification state
+voice_notifications_enabled = True
+
 class MCPService:
     """Service to interact with MCP servers for AWS data"""
     
@@ -293,6 +296,19 @@ def get_lambda_functions():
     """Get Lambda functions"""
     return jsonify(mcp_service.get_lambda_functions())
 
+@app.route('/api/voice-settings', methods=['GET', 'POST'])
+def voice_settings():
+    """Get or set voice notification settings"""
+    global voice_notifications_enabled
+    
+    if request.method == 'POST':
+        data = request.json
+        voice_notifications_enabled = data.get('enabled', True)
+        os.environ['VOICE_NOTIFICATIONS_ENABLED'] = str(voice_notifications_enabled)
+        return jsonify({'enabled': voice_notifications_enabled})
+    
+    return jsonify({'enabled': voice_notifications_enabled})
+
 @app.route('/api/investigations')
 def get_investigations():
     """Get active investigations"""
@@ -386,6 +402,18 @@ def handle_update_request():
     
     investigations = investigation_tracker.get_active_investigations()
     emit('investigation_update', investigations)
+
+@socketio.on('voice_settings')
+def handle_voice_settings(data):
+    """Handle voice notification settings from web dashboard"""
+    global voice_notifications_enabled
+    voice_notifications_enabled = data.get('enabled', True)
+    
+    # Set environment variable for other processes
+    os.environ['VOICE_NOTIFICATIONS_ENABLED'] = str(voice_notifications_enabled)
+    
+    logger.info(f"Voice notifications {'enabled' if voice_notifications_enabled else 'disabled'}")
+    emit('voice_settings_updated', {'enabled': voice_notifications_enabled})
 
 @socketio.on('start_investigation')
 def handle_start_investigation(data):

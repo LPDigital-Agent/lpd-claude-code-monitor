@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadInitialData();
     startClock();
     initializeToasts();
+    initializeVoiceToggle();
 });
 
 // WebSocket initialization
@@ -491,6 +492,51 @@ function simulateAgentLogs() {
             addLogEntry(msg.text, msg.type);
         }
     }, 5000);
+}
+
+// Initialize voice toggle
+function initializeVoiceToggle() {
+    const voiceToggle = document.getElementById('voice-toggle');
+    const voiceIcon = document.getElementById('voice-icon');
+    
+    // Load saved preference from localStorage
+    let voiceEnabled = localStorage.getItem('voiceNotifications') !== 'false';
+    updateVoiceIcon(voiceEnabled);
+    
+    // Send initial state to backend
+    socket.emit('voice_settings', { enabled: voiceEnabled });
+    
+    // Toggle voice on button click
+    voiceToggle.addEventListener('click', function() {
+        voiceEnabled = !voiceEnabled;
+        localStorage.setItem('voiceNotifications', voiceEnabled);
+        updateVoiceIcon(voiceEnabled);
+        
+        // Send update to backend
+        socket.emit('voice_settings', { enabled: voiceEnabled });
+        
+        // Show toast notification
+        const message = voiceEnabled ? 
+            '🔊 Voice notifications enabled' : 
+            '🔇 Voice notifications muted';
+        showAlert(message, 'info');
+    });
+}
+
+// Update voice icon based on state
+function updateVoiceIcon(enabled) {
+    const voiceIcon = document.getElementById('voice-icon');
+    const voiceToggle = document.getElementById('voice-toggle');
+    
+    if (enabled) {
+        voiceIcon.className = 'fas fa-volume-up';
+        voiceToggle.classList.remove('btn-muted');
+        voiceToggle.title = 'Voice Notifications ON (Click to mute)';
+    } else {
+        voiceIcon.className = 'fas fa-volume-mute';
+        voiceToggle.classList.add('btn-muted');
+        voiceToggle.title = 'Voice Notifications OFF (Click to unmute)';
+    }
 }
 
 // Initialize log streaming

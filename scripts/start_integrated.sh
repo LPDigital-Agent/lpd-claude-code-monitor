@@ -70,6 +70,10 @@ cleanup() {
     exit 0
 }
 
+# Create PID directory
+PID_DIR="/tmp/bhiveq"
+mkdir -p "$PID_DIR"
+
 # Setup trap for cleanup
 trap cleanup EXIT INT TERM
 
@@ -86,6 +90,7 @@ echo "  🤖 Starting ADK Multi-Agent Monitor..."
         sed 's/^/    [ADK] /' &
 ) &
 ADK_PID=$!
+echo $ADK_PID > "$PID_DIR/adk.pid"
 echo "  ✅ ADK monitor running (PID: $ADK_PID)"
 
 # Give ADK monitor time to initialize
@@ -105,6 +110,7 @@ echo "  🌐 Starting Web Dashboard..."
         sed 's/^/    [WEB] /' &
 ) &
 WEB_PID=$!
+echo $WEB_PID > "$PID_DIR/web.pid"
 echo "  ✅ Web dashboard running (PID: $WEB_PID)"
 
 echo ""
