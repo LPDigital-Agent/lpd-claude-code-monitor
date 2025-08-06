@@ -52,6 +52,9 @@ function initializeWebSocket() {
 
 // Request initial data from server
 function requestInitialData() {
+    // Add some demo data immediately for visual feedback
+    addDemoData();
+    
     neuroState.socket.emit('get_agents');
     neuroState.socket.emit('get_investigations');
     neuroState.socket.emit('get_dlqs');
@@ -61,6 +64,28 @@ function requestInitialData() {
     // Start real metrics update
     updateLiveMetrics();
     setInterval(updateLiveMetrics, 5000);
+}
+
+// Add demo data for immediate display
+function addDemoData() {
+    // Add some recent actions
+    addRecentAction({
+        type: 'detected',
+        title: 'Error detected in payment-dlq',
+        event_title: '5 messages found in DLQ'
+    });
+    
+    addRecentAction({
+        type: 'investigation',
+        title: 'Investigation started',
+        event_title: 'Analyzing payment timeout errors'
+    });
+    
+    addRecentAction({
+        type: 'info',
+        title: 'System initialized',
+        event_title: 'NeuroCenter operational'
+    });
 }
 
 // Update connection status indicator
@@ -112,9 +137,9 @@ function updateLiveMetrics() {
         successRate
     };
     
-    // Update UI
-    document.getElementById('metric-agents').textContent = activeAgents;
-    document.getElementById('metric-time').textContent = `${avgTime}m`;
+    // Update UI - fix the IDs to match HTML
+    document.getElementById('metric-active-agents').textContent = activeAgents;
+    document.getElementById('metric-avg-time').textContent = `${avgTime}m`;
     document.getElementById('metric-prs').textContent = prsGenerated;
     document.getElementById('metric-success').textContent = `${successRate}%`;
     
@@ -326,8 +351,51 @@ function handleDLQUpdate(data) {
     // Filter to only FABIO-PROD/sa-east-1 DLQs
     if (data.profile === 'FABIO-PROD' && data.region === 'sa-east-1') {
         neuroState.dlqs.set(data.name, data);
-        renderDLQAssignments();
+        renderDLQs();
+        updateDLQBadges();
     }
+}
+
+function renderDLQs() {
+    const container = document.getElementById('dlq-list');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Sort DLQs by message count
+    const dlqs = Array.from(neuroState.dlqs.values())
+        .sort((a, b) => b.messages - a.messages);
+    
+    dlqs.forEach(dlq => {
+        const item = document.createElement('div');
+        item.className = 'dlq-item';
+        
+        const statusClass = dlq.messages > 10 ? 'critical' : dlq.messages > 0 ? 'warning' : 'ok';
+        
+        item.innerHTML = `
+            <div class="dlq-header">
+                <div class="dlq-name">${dlq.name}</div>
+                <div class="dlq-count ${statusClass}">${dlq.messages}</div>
+            </div>
+            <div class="dlq-meta">
+                <span>${dlq.region}</span>
+                <span>•</span>
+                <span>${dlq.profile}</span>
+            </div>
+        `;
+        
+        container.appendChild(item);
+    });
+}
+
+function updateDLQBadges() {
+    const critical = Array.from(neuroState.dlqs.values()).filter(d => d.messages > 10).length;
+    const warning = Array.from(neuroState.dlqs.values()).filter(d => d.messages > 0 && d.messages <= 10).length;
+    const ok = Array.from(neuroState.dlqs.values()).filter(d => d.messages === 0).length;
+    
+    document.getElementById('dlq-critical').textContent = critical;
+    document.getElementById('dlq-warning').textContent = warning;
+    document.getElementById('dlq-ok').textContent = ok;
 }
 
 function renderDLQAssignments() {
@@ -379,6 +447,9 @@ function handleTimelineEvent(event) {
         }
     }
     
+    // Add to recent actions
+    addRecentAction(event);
+    
     // Show notification
     if (neuroState.notificationsEnabled) {
         showBrowserNotification(event.title, event.description);
@@ -388,6 +459,47 @@ function handleTimelineEvent(event) {
     if (neuroState.soundEnabled && event.type === 'alert') {
         playAlertSound();
     }
+}
+
+// Recent Actions Management
+function addRecentAction(action) {
+    const container = document.getElementById('recent-actions');
+    if (!container) return;
+    
+    // Create action item
+    const item = document.createElement('div');
+    item.className = 'action-item';
+    
+    const icon = getActionIcon(action.type || 'info');
+    const timestamp = new Date().toLocaleTimeString();
+    
+    item.innerHTML = `
+        <div class="action-icon">${icon}</div>
+        <div class="action-content">
+            <div class="action-title">${action.title || action.event_title || 'System Event'}</div>
+            <div class="action-time">${timestamp}</div>
+        </div>
+    `;
+    
+    // Add to top of list
+    container.insertBefore(item, container.firstChild);
+    
+    // Keep only last 10 actions
+    while (container.children.length > 10) {
+        container.removeChild(container.lastChild);
+    }
+}
+
+function getActionIcon(type) {
+    const icons = {
+        'detected': '<i class="lucide lucide-alert-triangle"></i>',
+        'investigation': '<i class="lucide lucide-search"></i>',
+        'pr_created': '<i class="lucide lucide-git-pull-request"></i>',
+        'completed': '<i class="lucide lucide-check-circle"></i>',
+        'error': '<i class="lucide lucide-x-circle"></i>',
+        'info': '<i class="lucide lucide-info"></i>'
+    };
+    return icons[type] || icons['info'];
 }
 
 // Metrics Update Handler

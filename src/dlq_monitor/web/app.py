@@ -49,6 +49,10 @@ logger = logging.getLogger(__name__)
 # Global voice notification state
 voice_notifications_enabled = True
 
+# Background thread for periodic updates
+background_thread = None
+stop_thread = False
+
 class MCPService:
     """Service to interact with MCP servers for AWS data"""
     
@@ -441,11 +445,54 @@ def background_monitor():
             logger.error(f"Background monitor error: {e}")
             time.sleep(10)
 
+def neurocenter_background_updates():
+    """Background thread to send periodic updates to NeuroCenter"""
+    while not stop_thread:
+        try:
+            with app.app_context():
+                # Send DLQ updates
+                dlqs = mcp_service.get_dlq_queues()
+                for dlq in dlqs:
+                    socketio.emit('dlq_update', {
+                        'name': dlq['name'],
+                        'messages': dlq['messages'],
+                        'profile': 'FABIO-PROD',
+                        'region': 'sa-east-1',
+                        'url': dlq.get('url', ''),
+                        'critical': dlq['messages'] >= 10,
+                        'status': dlq.get('status', 'ok')
+                    })
+                
+                # Send metrics update
+                if db_service:
+                    metrics = db_service.get_metrics_summary(hours=24)
+                    socketio.emit('metrics_update', {
+                        'activeAgents': metrics['active_agents'],
+                        'avgTime': metrics['average_investigation_time'],
+                        'prsGenerated': metrics['prs_created'],
+                        'successRate': metrics['success_rate']
+                    })
+                
+                time.sleep(10)  # Update every 10 seconds
+        except Exception as e:
+            logger.error(f"Error in background updates: {e}")
+            time.sleep(10)
+
 @socketio.on('connect')
 def handle_connect():
     """Handle WebSocket connection"""
+    global background_thread, stop_thread
+    
     emit('connected', {'data': 'Connected to DLQ Monitor'})
     logger.info('Client connected')
+    
+    # Start background thread if not already running
+    if background_thread is None or not background_thread.is_alive():
+        stop_thread = False
+        background_thread = Thread(target=neurocenter_background_updates)
+        background_thread.daemon = True
+        background_thread.start()
+        logger.info('Started background updates thread')
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -538,9 +585,12 @@ def handle_get_dlqs():
     for dlq in dlqs:
         emit('dlq_update', {
             'name': dlq['name'],
-            'message_count': dlq['messages'],
+            'messages': dlq['messages'],
+            'profile': 'FABIO-PROD',
             'region': 'sa-east-1',
-            'oldest_message': 'unknown'
+            'url': dlq.get('url', ''),
+            'critical': dlq['messages'] >= 10,
+            'status': dlq.get('status', 'ok')
         })
 
 @socketio.on('get_metrics')
