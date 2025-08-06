@@ -81,13 +81,22 @@ trap cleanup EXIT INT TERM
 echo "  🤖 Starting ADK Multi-Agent Monitor..."
 (
     export PYTHONUNBUFFERED=1
-    python3 -W ignore::UserWarning scripts/monitoring/adk_monitor.py 2>&1 | \
-        grep -v "blake2" | \
-        grep -v "ValueError" | \
-        grep -v "ERROR:root" | \
-        grep -v "Traceback" | \
-        grep -v "hashlib" | \
-        sed 's/^/    [ADK] /' &
+    while true; do
+        python3 -W ignore::UserWarning scripts/monitoring/adk_monitor.py 2>&1 | \
+            while IFS= read -r line; do
+                # Filter out Blake2 warnings but keep other output
+                if [[ ! "$line" =~ "blake2" ]] && \
+                   [[ ! "$line" =~ "ValueError: unsupported hash type" ]] && \
+                   [[ ! "$line" =~ "ERROR:root:code for hash" ]] && \
+                   [[ ! "$line" =~ "__get_builtin_constructor" ]] && \
+                   [[ ! "$line" =~ "Traceback" ]] && \
+                   [[ ! "$line" =~ "File \"/Users/" ]] && \
+                   [[ ! "$line" =~ "globals\(\)\[__func_name\]" ]]; then
+                    echo "    [ADK] $line"
+                fi
+            done
+        sleep 1
+    done
 ) &
 ADK_PID=$!
 echo $ADK_PID > "$PID_DIR/adk.pid"
@@ -99,15 +108,23 @@ sleep 2
 # Start web dashboard in background
 echo "  🌐 Starting Web Dashboard..."
 (
-    python3 -W ignore::UserWarning src/dlq_monitor/web/app.py 2>&1 | \
-        grep -v "blake2" | \
-        grep -v "ValueError" | \
-        grep -v "WARNING" | \
-        grep -v "ERROR:root" | \
-        grep -v "Traceback" | \
-        grep -v "hashlib" | \
-        grep -v "RuntimeError" | \
-        sed 's/^/    [WEB] /' &
+    while true; do
+        python3 -W ignore::UserWarning src/dlq_monitor/web/app.py 2>&1 | \
+            while IFS= read -r line; do
+                # Filter out Blake2 warnings but keep other output
+                if [[ ! "$line" =~ "blake2" ]] && \
+                   [[ ! "$line" =~ "ValueError: unsupported hash type" ]] && \
+                   [[ ! "$line" =~ "ERROR:root:code for hash" ]] && \
+                   [[ ! "$line" =~ "__get_builtin_constructor" ]] && \
+                   [[ ! "$line" =~ "RuntimeError: Working outside" ]] && \
+                   [[ ! "$line" =~ "Traceback" ]] && \
+                   [[ ! "$line" =~ "File \"/Users/" ]] && \
+                   [[ ! "$line" =~ "globals\(\)\[__func_name\]" ]]; then
+                    echo "    [WEB] $line"
+                fi
+            done
+        sleep 1
+    done
 ) &
 WEB_PID=$!
 echo $WEB_PID > "$PID_DIR/web.pid"
