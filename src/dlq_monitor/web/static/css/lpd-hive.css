@@ -65,7 +65,7 @@ body {
 /* Main Content */
 .main-content {
     margin-top: 60px;
-    height: calc(100vh - 60px);
+    height: calc(100vh - 60px - 80px); /* Account for stats bar */
     padding: 20px;
     overflow: hidden;
 }
@@ -453,6 +453,11 @@ body {
     }
 }
 
+.panel-header.alert-flash {
+    animation: alert-flash 0.5s ease-in-out;
+    border-color: var(--danger) !important;
+}
+
 @keyframes bounce {
     0%, 100% {
         transform: translateY(-50%);
@@ -538,9 +543,10 @@ img[alt="LPD Hive"]:before {
     background: rgba(0, 0, 0, 0.5);
     padding: 10px;
     border-radius: 4px;
-    height: 100%;
+    height: calc(100% - 20px);
     overflow-y: auto;
     overflow-x: hidden;
+    max-height: 200px;
 }
 
 .log-entry {

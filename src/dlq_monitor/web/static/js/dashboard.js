@@ -151,10 +151,22 @@ function updateDLQStatus(dlqs) {
     
     // Count by status
     let critical = 0, warning = 0, healthy = 0;
+    let hasCriticalDLQ = false;
     
     dlqs.forEach(dlq => {
         const status = getDLQStatus(dlq.messages);
-        if (status === 'critical') critical++;
+        if (status === 'critical') {
+            critical++;
+            hasCriticalDLQ = true;
+            
+            // Auto-trigger investigation for critical DLQs
+            if (dlq.messages >= 100 && !dlq.investigationInProgress) {
+                setTimeout(() => {
+                    addLogEntry(`⚠️ CRITICAL: Auto-investigating ${dlq.name} with ${dlq.messages} messages!`, 'error');
+                    startInvestigation(dlq);
+                }, 2000);
+            }
+        }
         else if (status === 'warning') warning++;
         else healthy++;
         
@@ -166,6 +178,14 @@ function updateDLQStatus(dlqs) {
     document.getElementById('critical-count').textContent = critical;
     document.getElementById('warning-count').textContent = warning;
     document.getElementById('healthy-count').textContent = healthy;
+    
+    // Flash alert if critical
+    if (hasCriticalDLQ) {
+        document.querySelector('.panel-header').classList.add('alert-flash');
+        setTimeout(() => {
+            document.querySelector('.panel-header').classList.remove('alert-flash');
+        }, 1000);
+    }
 }
 
 // Create DLQ Item element
@@ -341,13 +361,34 @@ function updateAgentCount() {
 
 // Start Investigation
 function startInvestigation(dlq) {
-    socket.emit('start_investigation', {
-        dlq: dlq.name,
-        messages: dlq.messages
-    });
-    
-    showAlert(`Investigation started for ${dlq.name}`, 'info');
-    addToTimeline(`Manual investigation triggered for ${dlq.name}`);
+    // Check if messages exceed threshold for auto-investigation
+    if (dlq.messages >= 100) {
+        socket.emit('start_investigation', {
+            dlq: dlq.name,
+            messages: dlq.messages,
+            priority: 'critical'
+        });
+        
+        showAlert(`🚨 CRITICAL: Investigation started for ${dlq.name} (${dlq.messages} messages)`, 'error');
+        addToTimeline(`🚨 Critical investigation triggered for ${dlq.name}`);
+        
+        // Update agent status immediately
+        updateAgentStatus({
+            id: 'investigator',
+            name: 'Investigation Agent',
+            status: 'investigating',
+            currentTask: `Analyzing ${dlq.name} with ${dlq.messages} messages`,
+            lastActivity: new Date()
+        });
+    } else {
+        socket.emit('start_investigation', {
+            dlq: dlq.name,
+            messages: dlq.messages
+        });
+        
+        showAlert(`Investigation started for ${dlq.name}`, 'info');
+        addToTimeline(`Manual investigation triggered for ${dlq.name}`);
+    }
 }
 
 // Show Alert Toast

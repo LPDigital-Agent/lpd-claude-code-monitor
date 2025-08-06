@@ -410,7 +410,13 @@ def handle_voice_settings(data):
     voice_notifications_enabled = data.get('enabled', True)
     
     # Set environment variable for other processes
-    os.environ['VOICE_NOTIFICATIONS_ENABLED'] = str(voice_notifications_enabled)
+    os.environ['VOICE_NOTIFICATIONS_ENABLED'] = 'True' if voice_notifications_enabled else 'False'
+    
+    # Write to a file for persistence across processes
+    voice_state_file = '/tmp/bhiveq/voice_state'
+    os.makedirs('/tmp/bhiveq', exist_ok=True)
+    with open(voice_state_file, 'w') as f:
+        f.write('enabled' if voice_notifications_enabled else 'disabled')
     
     logger.info(f"Voice notifications {'enabled' if voice_notifications_enabled else 'disabled'}")
     emit('voice_settings_updated', {'enabled': voice_notifications_enabled})

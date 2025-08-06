@@ -70,9 +70,17 @@ class ElevenLabsTTS:
         
     def generate_audio(self, text: str) -> Optional[bytes]:
         """Generate audio from text using ElevenLabs API"""
-        # Check if voice notifications are enabled
+        # Check voice state file first
+        voice_state_file = '/tmp/bhiveq/voice_state'
+        if os.path.exists(voice_state_file):
+            with open(voice_state_file, 'r') as f:
+                if f.read().strip() == 'disabled':
+                    logger.info("Voice notifications are muted (file check)")
+                    return None
+        
+        # Check if voice notifications are enabled via environment
         if os.environ.get('VOICE_NOTIFICATIONS_ENABLED', 'True').lower() == 'false':
-            logger.info("Voice notifications are muted")
+            logger.info("Voice notifications are muted (env check)")
             return None
             
         if not PYGAME_AVAILABLE:
