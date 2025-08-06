@@ -26,6 +26,13 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
+# Web dashboard setup
+cd src/dlq_monitor/web
+pip install -r requirements.txt  # Flask and dependencies
+
+# Start web dashboard
+./start_web_dashboard.sh   # Launches on http://localhost:5000
+
 # Install Google ADK and additional requirements
 pip install google-adk google-generativeai
 pip install -r requirements_adk.txt
@@ -89,17 +96,29 @@ src/dlq_monitor/
 ├── dashboards/     # Terminal UI dashboards (curses-based)
 ├── notifiers/      # Notification systems (audio, macOS)
 ├── utils/          # Utilities (GitHub, production runners)
+├── web/           # Web dashboard (Flask, WebSocket, Chart.js)
+│   ├── app.py     # Flask backend with AWS integration
+│   ├── static/    # Frontend assets (JS, CSS)
+│   └── templates/ # HTML templates
 └── cli.py          # Click-based CLI with Rich formatting
 ```
 
 ### Key Architectural Patterns
 
-#### 1. **Monitoring Loop Architecture**
-The system uses a polling-based architecture with state tracking:
-- `core/monitor.py` polls AWS SQS queues matching DLQ patterns
-- Maintains state in memory and compares with previous iterations
+#### 1. **Monitoring Architecture**
+The system provides both web and terminal monitoring interfaces:
+
+a) **Web Dashboard** (`web/app.py`):
+- Flask backend with WebSocket for real-time updates
+- Direct AWS access via boto3 Session
+- Modern Bootstrap 5 UI with Chart.js visualizations
+- Runs locally on http://localhost:5000
+
+b) **Terminal Monitor** (`core/monitor.py`):
+- Curses-based terminal UI with state tracking
+- Log file parsing for DLQ status
 - Triggers actions when thresholds are exceeded
-- All monitors inherit this pattern with different UI presentations
+- All terminal monitors inherit this pattern
 
 #### 2. **Claude Investigation Flow**
 Multi-process architecture for auto-investigation:
