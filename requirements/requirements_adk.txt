@@ -1,0 +1,36 @@
+# ADK Multi-Agent DLQ Monitor Dependencies
+
+# Google ADK for agent framework
+google-adk>=1.0.0
+
+# AWS MCP Servers for AWS integration
+awslabs.aws-api-mcp-server>=1.0.0
+awslabs.amazon-sns-sqs-mcp-server>=1.0.0
+
+# AWS SDK (for additional operations)
+boto3>=1.26.0
+
+# GitHub integration
+PyGithub>=2.0.0
+
+# Voice notifications
+elevenlabs>=0.2.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Async support
+aiofiles>=23.0.0
+asyncio>=3.4.3
+
+# MCP client (if needed for custom integration)
+mcp>=0.1.0
+
+# Logging and monitoring
+structlog>=23.0.0
+rich>=13.0.0
+
+# Testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0

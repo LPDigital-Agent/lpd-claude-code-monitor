@@ -403,3 +403,7 @@ class PRAudioMonitor:
         self.running = False
         if self.thread:
             self.thread.join(timeout=5)
+
+
+# Export classes for use by other modules
+__all__ = ['ElevenLabsTTS', 'PRAudioMonitor', 'PullRequest']

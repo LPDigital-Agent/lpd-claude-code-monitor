@@ -6,15 +6,16 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
 
 echo "🚀 Financial Move DLQ Monitor Launcher"
-echo "📂 Project: $SCRIPT_DIR"
+echo "📂 Project: $PROJECT_ROOT"
 echo "🔑 Profile: FABIO-PROD"
 echo "🌍 Region: sa-east-1"
 echo "=================================="
 
-# Check if virtual environment exists
+# Check if virtual environment exists in project root
 if [ ! -d "venv" ]; then
     echo "❌ Virtual environment not found!"
     echo "💡 Run: python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
@@ -24,6 +25,13 @@ fi
 # Activate virtual environment
 echo "🔧 Activating virtual environment..."
 source venv/bin/activate
+
+# Install package in development mode if not already installed
+if ! pip show lpd-claude-code-monitor > /dev/null 2>&1; then
+    echo "📦 Installing package in development mode..."
+    pip install -e . > /dev/null 2>&1
+    echo "✅ Package installed"
+fi
 
 # Source GitHub credentials if available
 if [ -f ".env" ]; then
@@ -71,6 +79,10 @@ if [ $# -eq 0 ]; then
     echo "  🤖 CLAUDE CODE TESTING:"
     echo "    ./start_monitor.sh test-claude             # Test Claude Code setup"
     echo "    ./start_monitor.sh test-execution          # Test Claude execution"
+    echo ""
+    echo "  🚀 ADK MULTI-AGENT SYSTEM:"
+    echo "    ./start_monitor.sh adk-production          # ADK production monitoring"
+    echo "    ./start_monitor.sh adk-test [cycles]       # Test ADK system"
     echo ""
     echo "  🔍 STATUS & MONITORING:"
     echo "    ./start_monitor.sh status                  # Check Claude investigation status"
@@ -170,6 +182,21 @@ case "$COMMAND" in
         echo "🚀 Starting ULTIMATE CLAUDE AI MONITOR - TOP TOP VERSION!"
         echo "🤖 This is the most comprehensive monitor with EVERYTHING!"
         dlq-ultimate
+        ;;
+    
+    "adk-production")
+        echo "🚀 Starting ADK Multi-Agent DLQ Monitor System"
+        echo "🤖 6 specialized agents powered by Google Gemini"
+        echo "🔧 With AWS MCP servers for native AWS integration"
+        echo "⚠️  Press Ctrl+C to stop"
+        echo ""
+        python3 scripts/monitoring/adk_monitor.py --mode production
+        ;;
+    
+    "adk-test")
+        CYCLES=${1:-3}
+        echo "🧪 Testing ADK Monitor System ($CYCLES cycles)"
+        python3 scripts/monitoring/adk_monitor.py --mode test --cycles "$CYCLES"
         ;;
     
     "logs")

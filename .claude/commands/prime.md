@@ -8,6 +8,11 @@ Activate advanced reasoning capabilities:
 - ultrathink
 - mcp sequential thinking
 - mcp memory
+- Context7 for documentation search
+- AWS Documentation for service docs
+- CloudWatch Logs for advanced analysis
+- Lambda Tools for function debugging
+- Sequential Thinking for systematic root cause analysis
 
 ## RUN COMMANDS
 Execute these to understand project state:
@@ -61,13 +66,17 @@ src/dlq_monitor/core/monitor.py    # Core monitoring engine
 src/dlq_monitor/claude/session_manager.py  # Claude AI integration
 src/dlq_monitor/cli.py             # CLI interface with Rich
 src/dlq_monitor/dashboards/ultimate.py     # Most comprehensive dashboard
+adk_agents/investigator.py         # Enhanced investigation agent with MCP tools
+src/dlq_monitor/utils/aws_sqs_helper.py  # AWS SQS best practices implementation
 ```
 
 ### 4. INTEGRATION POINTS
 External system integrations:
 ```
 src/dlq_monitor/utils/github_integration.py  # GitHub PR creation
-src/dlq_monitor/notifiers/pr_audio.py       # Audio notification system
+src/dlq_monitor/notifiers/pr_audio.py       # Audio notification system (Voice: 19STyYD15bswVz51nqLf)
+src/dlq_monitor/notifiers/macos_notifier.py # macOS notifications with TTS
+config/mcp_settings.json           # MCP server configurations
 ```
 
 ### 5. DEVELOPMENT TOOLS
@@ -140,9 +149,20 @@ make qa         # Format + Lint + Test
 Remember to utilize MCP tools when appropriate:
 - mcp memory - For persistent context
 - mcp sequential thinking - For complex reasoning
-- mcp Context7 - For library documentation
+- mcp Context7 - For library documentation and code examples
+- mcp AWS Documentation - For AWS service docs and error codes
+- mcp CloudWatch Logs - For advanced log analysis with filtering
+- mcp Lambda Tools - For Lambda function configuration analysis
 - mcp GitHub - For repository operations
 - mcp ActiveCampaign - For marketing automation (if needed)
+
+### ENHANCED INVESTIGATION CAPABILITIES
+The Investigation Agent now includes:
+1. **Context7 Integration**: Search documentation for error patterns
+2. **AWS Documentation Lookup**: Find solutions for AWS error codes
+3. **CloudWatch Advanced Analysis**: Deep log pattern analysis with insights
+4. **Lambda Function Debugging**: Check configurations, timeouts, memory
+5. **Sequential Thinking**: Systematic step-by-step root cause analysis
 
 ## COMMON TASKS
 When asked to work on this project, consider:

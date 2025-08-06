@@ -177,3 +177,9 @@ demo:
   sample_queues: ["payment-dlq", "order-dlq"]
   simulate_realistic_patterns: true
 ```
+
+## Project Organization Guidelines
+
+- Keep the project organized according to best practices for Python and agent AI projects
+- Do not leave files on the root directory
+- Maintain a clean and structured project layout

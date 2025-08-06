@@ -6,6 +6,8 @@
 [![AWS](https://img.shields.io/badge/AWS-SQS-orange)](https://aws.amazon.com/sqs/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
+📁 **Project Organization**: All files are organized following Python and AI agent best practices. Configuration files are in `config/`, requirements in `requirements/`, and documentation in `docs/`. See [Project Structure](docs/project/PROJECT_STRUCTURE.md) for details.
+
 ## 🌟 Features
 
 ### 🤖 **Auto-Investigation with Claude AI**
