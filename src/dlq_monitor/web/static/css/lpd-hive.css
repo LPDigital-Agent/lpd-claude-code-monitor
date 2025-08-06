@@ -450,6 +450,21 @@ body {
     opacity: 1;
 }
 
+/* Logo and Images */
+.navbar-brand img {
+    display: inline-block;
+    vertical-align: middle;
+    filter: brightness(1.1);
+}
+
+/* Fallback for missing images */
+img[alt="LPD Digital Hive"]:before,
+img[alt="LPD Hive"]:before {
+    content: "🎨";
+    display: inline-block;
+    font-size: 24px;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 1200px) {
     .panel-body {
