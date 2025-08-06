@@ -30,7 +30,7 @@ import boto3
 from dlq_monitor.services.database_service import get_database_service
 from dlq_monitor.services.investigation_service import get_investigation_service
 from dlq_monitor.notifiers.macos_notifier import MacNotifier
-from dlq_monitor.notifiers.pr_audio import PRAudioNotifier
+from dlq_monitor.notifiers.pr_audio import PRAudioMonitor
 
 # Import ADK components
 try:
@@ -205,7 +205,7 @@ class NotifierAgent:
     
     def __init__(self):
         self.macos_notifier = MacNotifier()
-        self.pr_notifier = PRAudioNotifier()
+        self.pr_notifier = PRAudioMonitor()
         self.last_notifications = {}
         
     def send_alert(self, dlq_name: str, message_count: int):
