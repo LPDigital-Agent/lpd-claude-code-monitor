@@ -91,12 +91,16 @@ export GITHUB_TOKEN=$(gh auth token 2>/dev/null)
 
 ### 4. Start monitoring
 ```bash
-# LPD Hive Web Dashboard (Recommended)
-./scripts/start_dashboard.sh
+# INTEGRATED MODE - Web Dashboard + ADK Monitor (Recommended)
+./scripts/start_integrated.sh
+# Starts both ADK multi-agent monitoring and web dashboard
 # Open http://localhost:5001 in your browser
 
+# OR Web Dashboard only
+./scripts/start_dashboard.sh
+
 # OR Terminal monitoring with auto-investigation
-./scripts/start_monitor.sh production
+./scripts/start_monitor.sh adk-production
 
 # OR Enhanced terminal dashboard
 ./scripts/start_monitor.sh enhanced
@@ -111,10 +115,11 @@ export GITHUB_TOKEN=$(gh auth token 2>/dev/null)
 
 | Command | Description |
 |---------|-------------|
-| `./scripts/start_dashboard.sh` | **LPD Hive Web Dashboard** (Recommended) |
-| `./scripts/start_monitor.sh production` | Start production DLQ monitoring |
-| `./scripts/start_monitor.sh adk-production` | ADK multi-agent monitoring with MCP tools |
-| `./scripts/start_monitor.sh enhanced` | Launch enhanced terminal dashboard |
+| `./scripts/start_integrated.sh` | **🚀 Integrated Mode** - ADK Monitor + Web Dashboard (Best) |
+| `./scripts/start_dashboard.sh` | LPD Hive Web Dashboard only |
+| `./scripts/start_monitor.sh adk-production` | ADK multi-agent monitoring (terminal) |
+| `./scripts/start_monitor.sh production` | Standard production monitoring |
+| `./scripts/start_monitor.sh enhanced` | Enhanced terminal dashboard |
 | `./scripts/start_monitor.sh discover` | Discover all DLQ queues |
 | `./scripts/start_monitor.sh test` | Test mode (3 cycles) |
 | `./scripts/start_monitor.sh cli monitor` | CLI monitoring interface |

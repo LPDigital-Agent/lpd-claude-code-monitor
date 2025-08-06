@@ -17,8 +17,10 @@ export GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || echo '')}"
 export PYTHONWARNINGS="ignore"
 
 # Run with all output suppressed except essentials
-cd "$(dirname "$0")"
-source venv/bin/activate 2>/dev/null
+cd "$(dirname "$0")/../.."
+source venv/bin/activate 2>/dev/null || true
+
+export PYTHONPATH="${PWD}:${PYTHONPATH}"
 
 python3 -c "
 import warnings; warnings.filterwarnings('ignore')

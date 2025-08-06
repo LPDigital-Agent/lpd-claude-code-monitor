@@ -340,11 +340,24 @@ def background_monitor():
     """Background thread to emit real-time updates"""
     while True:
         try:
+            # Emit DLQ updates
             dlqs = mcp_service.get_dlq_queues()
             socketio.emit('dlq_update', dlqs)
             
+            # Emit investigation updates
             investigations = investigation_tracker.get_active_investigations()
             socketio.emit('investigation_update', investigations)
+            
+            # Emit agent status updates
+            agents = get_agent_status()
+            for agent_id, agent_data in agents.items():
+                socketio.emit('agent_update', {
+                    'id': agent_id,
+                    'name': agent_data['name'],
+                    'status': agent_data['status'],
+                    'lastActivity': agent_data['lastActivity'],
+                    'currentTask': agent_data['currentTask']
+                })
             
             time.sleep(5)
         except Exception as e:
@@ -374,9 +387,41 @@ def handle_update_request():
     investigations = investigation_tracker.get_active_investigations()
     emit('investigation_update', investigations)
 
+@socketio.on('start_investigation')
+def handle_start_investigation(data):
+    """Handle investigation request from web dashboard"""
+    dlq_name = data.get('dlq')
+    messages = data.get('messages', 0)
+    
+    logger.info(f"Web dashboard requested investigation for {dlq_name} with {messages} messages")
+    
+    # Trigger ADK investigation by writing to a trigger file
+    trigger_file = os.path.join(os.path.dirname(__file__), '../../../.dlq_investigation_trigger')
+    with open(trigger_file, 'w') as f:
+        json.dump({
+            'dlq': dlq_name,
+            'messages': messages,
+            'timestamp': datetime.now().isoformat(),
+            'source': 'web_dashboard'
+        }, f)
+    
+    emit('alert', {
+        'message': f'Investigation triggered for {dlq_name}',
+        'type': 'success'
+    })
+    
+    # Update agent status immediately
+    emit('agent_update', {
+        'id': 'investigator',
+        'name': 'Investigation Agent',
+        'status': 'investigating',
+        'lastActivity': datetime.now().isoformat(),
+        'currentTask': f'Investigating {dlq_name} ({messages} messages)'
+    })
+
 def get_agent_status():
-    """Get status of all agents"""
-    return {
+    """Get status of all agents - checks ADK monitor log for real status"""
+    agents = {
         'investigator': {
             'name': 'Investigation Agent',
             'status': 'idle',
@@ -402,6 +447,36 @@ def get_agent_status():
             'currentTask': None
         }
     }
+    
+    # Check ADK monitor log for agent activity
+    try:
+        adk_log_path = os.path.join(os.path.dirname(__file__), '../../../logs/adk_monitor.log')
+        if os.path.exists(adk_log_path):
+            # Read last 100 lines of log
+            with open(adk_log_path, 'r') as f:
+                lines = f.readlines()[-100:]
+            
+            # Parse for agent activity
+            for line in reversed(lines):
+                if 'Investigation Agent' in line and 'investigating' in line.lower():
+                    agents['investigator']['status'] = 'investigating'
+                    agents['investigator']['lastActivity'] = datetime.now().isoformat()
+                    if 'DLQ:' in line:
+                        dlq_name = line.split('DLQ:')[1].strip().split()[0]
+                        agents['investigator']['currentTask'] = f'Investigating {dlq_name}'
+                elif 'DLQ Analyzer' in line and 'analyzing' in line.lower():
+                    agents['analyzer']['status'] = 'active'
+                    agents['analyzer']['lastActivity'] = datetime.now().isoformat()
+                elif 'Code Debugger' in line and 'debugging' in line.lower():
+                    agents['debugger']['status'] = 'active'
+                    agents['debugger']['lastActivity'] = datetime.now().isoformat()
+                elif 'Code Reviewer' in line and 'reviewing' in line.lower():
+                    agents['reviewer']['status'] = 'active'
+                    agents['reviewer']['lastActivity'] = datetime.now().isoformat()
+    except Exception as e:
+        logger.debug(f"Could not read ADK monitor log: {e}")
+    
+    return agents
 
 def get_system_stats():
     """Get system statistics"""
