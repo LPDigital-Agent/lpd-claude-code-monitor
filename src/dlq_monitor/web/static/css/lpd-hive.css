@@ -66,7 +66,7 @@ body {
 .main-content {
     margin-top: 60px;
     height: calc(100vh - 60px - 80px); /* Account for stats bar */
-    padding: 20px;
+    padding: 15px;
     overflow: hidden;
 }
 
@@ -654,4 +654,146 @@ img[alt="LPD Hive"]:before {
 
 .d-none {
     display: none !important;
+}
+
+/* Activity Feed */
+.activity-feed {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.activity-entry {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+    position: relative;
+    animation: slideIn 0.3s ease;
+}
+
+.activity-entry.agent {
+    border-left: 3px solid var(--success);
+}
+
+.activity-entry.investigation {
+    border-left: 3px solid var(--lpd-orange);
+}
+
+.activity-entry.pr {
+    border-left: 3px solid var(--warning);
+}
+
+.activity-timestamp {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    position: absolute;
+    right: 12px;
+    top: 12px;
+}
+
+.activity-content {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.activity-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+/* Compact PR List */
+.pr-list.compact .pr-item {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+}
+
+.pr-list.compact .pr-item:nth-child(n+4) {
+    display: none;
+}
+
+/* Agent Expandable Details */
+.agent-card.expanded {
+    background: var(--bg-secondary);
+}
+
+.agent-logs {
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.agent-log-entry {
+    margin-bottom: 5px;
+    color: var(--success);
+}
+
+/* Investigation Progress */
+.investigation-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.investigation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.investigation-dlq {
+    font-weight: 600;
+    color: var(--lpd-orange);
+    font-size: 0.9rem;
+}
+
+.investigation-status {
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--bg-secondary);
+}
+
+.investigation-status.active {
+    background: rgba(255, 87, 34, 0.2);
+    color: var(--lpd-orange);
+}
+
+.investigation-status.completed {
+    background: rgba(76, 175, 80, 0.2);
+    color: var(--success);
+}
+
+/* DLQ Clickable */
+.dlq-item {
+    cursor: pointer;
+}
+
+.dlq-item .investigate-btn {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.dlq-item:hover .investigate-btn {
+    opacity: 1;
+}
+
+.investigate-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    background: var(--lpd-orange);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
 }

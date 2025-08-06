@@ -17,6 +17,26 @@ import requests
 from threading import Thread
 import time
 import logging
+import sys
+from pathlib import Path
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Import NeuroCenter services
+try:
+    from dlq_monitor.services.database_service import get_database_service
+    from dlq_monitor.services.investigation_service import get_investigation_service
+    neurocenter_enabled = True
+    db_service = get_database_service()
+    investigation_service = get_investigation_service()
+except ImportError as e:
+    neurocenter_enabled = False
+    db_service = None
+    investigation_service = None
+    logger = logging.getLogger(__name__)
+    logger.warning(f"NeuroCenter services not available - running in legacy mode: {e}")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dlq-monitor-secret-key-2025')
@@ -211,6 +231,13 @@ def index():
     """Serve the main dashboard page"""
     return render_template('dashboard.html')
 
+@app.route('/neurocenter')
+def neurocenter():
+    """Serve the NeuroCenter dashboard"""
+    if not neurocenter_enabled:
+        return "NeuroCenter services not available", 503
+    return render_template('neurocenter.html')
+
 @app.route('/api/dashboard/summary')
 def dashboard_summary():
     """Get dashboard summary data"""
@@ -375,6 +402,40 @@ def background_monitor():
                     'currentTask': agent_data['currentTask']
                 })
             
+            # Emit PR updates
+            prs = mcp_service.get_github_prs()
+            socketio.emit('pr_update', prs)
+            
+            # Emit stats updates
+            stats = get_system_stats()
+            socketio.emit('stats_update', stats)
+            
+            # Emit NeuroCenter updates if enabled
+            if neurocenter_enabled and db_service:
+                # Emit DLQ updates for NeuroCenter
+                for dlq in dlqs:
+                    socketio.emit('dlq_update', {
+                        'name': dlq['name'],
+                        'message_count': dlq['messages'],
+                        'region': 'sa-east-1',
+                        'oldest_message': 'unknown'
+                    })
+                
+                # Emit metrics for NeuroCenter
+                metrics = db_service.get_metrics_summary(hours=24)
+                socketio.emit('metrics_update', {
+                    'activeAgents': metrics['active_agents'],
+                    'avgTime': metrics['average_investigation_time'],
+                    'prsGenerated': metrics['prs_created'],
+                    'successRate': metrics['success_rate']
+                })
+                
+                # Emit active investigations from NeuroCenter
+                if investigation_service:
+                    nc_investigations = investigation_service.get_active_investigations()
+                    for inv in nc_investigations:
+                        socketio.emit('investigation_update', inv)
+            
             time.sleep(5)
         except Exception as e:
             logger.error(f"Background monitor error: {e}")
@@ -452,6 +513,118 @@ def handle_start_investigation(data):
         'lastActivity': datetime.now().isoformat(),
         'currentTask': f'Investigating {dlq_name} ({messages} messages)'
     })
+
+# NeuroCenter WebSocket Handlers
+@socketio.on('get_agents')
+def handle_get_agents():
+    """Get all agents from database"""
+    if db_service:
+        agents = db_service.get_all_agents()
+        for agent in agents:
+            emit('agent_update', agent)
+
+@socketio.on('get_investigations')
+def handle_get_investigations():
+    """Get active investigations"""
+    if investigation_service:
+        investigations = investigation_service.get_active_investigations()
+        for inv in investigations:
+            emit('investigation_update', inv)
+
+@socketio.on('get_dlqs')
+def handle_get_dlqs():
+    """Get DLQ status"""
+    dlqs = mcp_service.get_dlq_queues()
+    for dlq in dlqs:
+        emit('dlq_update', {
+            'name': dlq['name'],
+            'message_count': dlq['messages'],
+            'region': 'sa-east-1',
+            'oldest_message': 'unknown'
+        })
+
+@socketio.on('get_metrics')
+def handle_get_metrics():
+    """Get system metrics"""
+    if db_service:
+        metrics = db_service.get_metrics_summary(hours=24)
+        emit('metrics_update', {
+            'activeAgents': metrics['active_agents'],
+            'avgTime': metrics['average_investigation_time'],
+            'prsGenerated': metrics['prs_created'],
+            'successRate': metrics['success_rate']
+        })
+
+@socketio.on('get_mappings')
+def handle_get_mappings():
+    """Get agent-DLQ mappings"""
+    if db_service:
+        mappings = db_service.get_dlq_mappings()
+        emit('mappings_update', mappings)
+
+@socketio.on('create_mapping')
+def handle_create_mapping(data):
+    """Create new agent-DLQ mapping"""
+    if db_service:
+        success = db_service.create_dlq_mapping(
+            agent_id=data.get('agent'),
+            dlq_pattern=data.get('pattern'),
+            trigger_type=data.get('trigger_type'),
+            trigger_rule={'threshold': int(data.get('threshold', 50))},
+            environment=data.get('environment', 'all')
+        )
+        if success:
+            emit('alert', {
+                'type': 'success',
+                'title': 'Mapping Created',
+                'message': 'Agent-DLQ mapping has been created successfully'
+            })
+            handle_get_mappings()
+
+@socketio.on('investigate_dlq')
+def handle_investigate_dlq(data):
+    """Start investigation for a specific DLQ"""
+    dlq_name = data.get('dlq_name')
+    
+    if investigation_service:
+        # Get DLQ details
+        dlqs = mcp_service.get_dlq_queues()
+        dlq = next((q for q in dlqs if q['name'] == dlq_name), None)
+        
+        if dlq:
+            # Start investigation using NeuroCenter service
+            investigation_id = investigation_service.start_investigation(
+                dlq_name=dlq_name,
+                message_count=dlq['messages']
+            )
+            
+            emit('alert', {
+                'type': 'info',
+                'title': 'Investigation Started',
+                'message': f'Investigation {investigation_id} started for {dlq_name}'
+            })
+            
+            # Simulate investigation progress for demo
+            if investigation_id:
+                thread = Thread(target=lambda: investigation_service.simulate_investigation(dlq_name, dlq['messages']))
+                thread.daemon = True
+                thread.start()
+
+@socketio.on('start_agent')
+def handle_start_agent(data):
+    """Start a specific agent"""
+    agent_id = data.get('agent_id')
+    if db_service:
+        db_service.update_agent_status(agent_id, 'running')
+        emit('agent_update', {'id': agent_id, 'status': 'running'})
+
+@socketio.on('stop_agent')
+def handle_stop_agent(data):
+    """Stop a specific agent"""
+    agent_id = data.get('agent_id')
+    if db_service:
+        db_service.update_agent_status(agent_id, 'idle')
+        emit('agent_update', {'id': agent_id, 'status': 'idle'})
 
 def get_agent_status():
     """Get status of all agents - checks ADK monitor log for real status"""
@@ -546,9 +719,14 @@ if __name__ == '__main__':
     thread.daemon = True
     thread.start()
     
-    # Use port 5001 to avoid conflict with macOS AirPlay Receiver
+    # Use port from environment or default
     port = int(os.environ.get('FLASK_PORT', 5001))
-    logger.info(f"🚀 Starting Enhanced DLQ Web Dashboard on http://localhost:{port}")
+    
+    # Determine which dashboard we're running
+    dashboard_type = "NeuroCenter" if neurocenter_enabled else "Enhanced DLQ Web Dashboard"
+    logger.info(f"🚀 Starting {dashboard_type} on http://localhost:{port}")
+    if neurocenter_enabled:
+        logger.info(f"   NeuroCenter: http://localhost:{port}/neurocenter")
     
     # Allow unsafe werkzeug for local development
     # In production, use a proper WSGI server like gunicorn

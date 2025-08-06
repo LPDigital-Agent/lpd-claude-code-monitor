@@ -31,16 +31,41 @@ lpd-claude-code-monitor/
 │       ├── core/            # Core monitoring engine
 │       ├── claude/          # Claude AI integration
 │       ├── dashboards/      # Terminal UI dashboards
+│       ├── models/          # Database models (NeuroCenter)
+│       │   └── neurocenter_models.py  # SQLAlchemy models
+│       ├── services/        # Business logic services
+│       │   ├── database_service.py    # Database operations
+│       │   └── investigation_service.py # Investigation management
+│       ├── database/        # Database files
+│       │   └── neurocenter.db         # SQLite database
+│       ├── web/             # Web interfaces
+│       │   ├── app.py                 # Flask application
+│       │   ├── templates/             # HTML templates
+│       │   │   ├── dashboard.html     # BHiveQ dashboard
+│       │   │   └── neurocenter.html   # NeuroCenter UI
+│       │   └── static/                # Static assets
+│       │       ├── css/               # Stylesheets
+│       │       ├── js/                # JavaScript
+│       │       └── brand/             # BHiveQ branding
 │       ├── notifiers/       # Notification systems
 │       ├── utils/           # Utilities
 │       └── cli.py           # CLI interface
 │
-├── scripts/                 # Executable scripts
+├── scripts/                 # Executable scripts (organized)
+│   ├── launch/              # Service launchers
+│   │   ├── start_integrated.sh    # Integrated system launcher
+│   │   ├── start_dashboard.sh     # Dashboard-only launcher
+│   │   ├── stop_all.sh           # Stop all services
+│   │   └── neurocenter.sh        # NeuroCenter launcher
 │   ├── monitoring/          # Monitoring scripts
-│   │   └── adk_monitor.py   # ADK system entry point
+│   │   ├── adk_monitor.py        # ADK system entry point
+│   │   └── adk_production_monitor.py # Production ADK monitor
+│   ├── web/                 # Web-related scripts
+│   │   ├── run_neurocenter.py    # NeuroCenter runner
+│   │   └── run_web.py            # Web dashboard runner
 │   ├── setup/               # Setup and configuration
-│   │   └── quick_setup.sh   # Quick setup script
-│   └── start_monitor.sh     # Main launcher script
+│   │   └── quick_setup.sh        # Quick setup script
+│   └── README.md            # Scripts documentation
 │
 ├── tests/                   # Test suites
 │   ├── unit/                # Unit tests
@@ -54,7 +79,10 @@ lpd-claude-code-monitor/
 │   ├── guides/              # User guides
 │   └── development/         # Developer documentation
 │
-├── log/                     # Application logs
+├── logs/                    # Application logs (centralized)
+├── .pids/                   # Process ID files for service management
+├── launcher.sh              # Master launcher with interactive menu
+├── neurocenter.sh           # Quick NeuroCenter launcher
 ├── .github/                 # GitHub workflows and actions
 └── venv/                    # Virtual environment (excluded from git)
 ```

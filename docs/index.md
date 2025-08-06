@@ -8,11 +8,16 @@ This system provides intelligent monitoring of AWS SQS Dead Letter Queues with a
 
 ## ✨ Key Features
 
+- **🧠 BHiveQ NeuroCenter**: Professional operational intelligence dashboard with Dark Ops Center theme
 - **Real-time DLQ Monitoring**: Continuous monitoring of AWS SQS Dead Letter Queues
+- **ADK Multi-Agent System**: 6 specialized AI agents working in coordination
 - **Claude AI Auto-Investigation**: Automated root cause analysis and fix implementation
 - **GitHub Integration**: Automatic PR creation for fixes and improvements
 - **Audio Notifications**: ElevenLabs TTS notifications for PR status updates
-- **Enhanced Dashboards**: Real-time curses-based monitoring interfaces
+- **Enhanced Dashboards**: Multiple monitoring interfaces (NeuroCenter, Web, Terminal)
+- **Database Persistence**: SQLAlchemy-based tracking of investigations and metrics
+- **MCP Tool Integration**: 5 special tools for enhanced investigation capabilities
+- **BHiveQ Branding**: Professional orange-themed UI with hexagonal patterns
 - **Comprehensive Logging**: Detailed audit trails for all investigations
 - **Multi-Agent Architecture**: Parallel subagent deployment for complex investigations
 
@@ -67,8 +72,10 @@ This system provides intelligent monitoring of AWS SQS Dead Letter Queues with a
 ### 🎯 [User Guides](./guides/)
 Step-by-step guides for common tasks and workflows:
 - [Setup and Configuration Guide](./guides/setup-guide.md)
+- [BHiveQ NeuroCenter Guide](./neurocenter.md) 🧠
 - [Auto-Investigation Guide](./guides/auto-investigation.md)
 - [Dashboard Usage Guide](./guides/dashboard-usage.md)
+- [ADK Multi-Agent System](./README-ADK.md)
 - [Troubleshooting Guide](./guides/troubleshooting.md)
 
 ### 🔧 [API Documentation](./api/)
@@ -134,11 +141,11 @@ The system is primarily configured through:
 
 ## 📝 Recent Updates
 
-- **v2.0**: Enhanced multi-agent investigation system
+- **v3.1**: BHiveQ NeuroCenter - Operational intelligence dashboard
+- **v3.0**: BHiveQ Branding - Complete transformation to Observability Hub
+- **v2.0**: ADK Multi-Agent System with MCP tool integration
 - **v1.5**: Added ElevenLabs audio notifications
 - **v1.4**: Implemented ultimate monitoring dashboard
-- **v1.3**: Enhanced GitHub integration with PR tracking
-- **v1.2**: Added cooldown mechanisms and session management
 
 ## 🤝 Contributing
 

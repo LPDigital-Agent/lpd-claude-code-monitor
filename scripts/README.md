@@ -1,19 +1,41 @@
 # Scripts Directory
 
-This directory contains all executable scripts for the LPD Claude Code Monitor project.
+Organized scripts for the LPD Claude Code Monitor project following Python and AI Agent best practices.
 
-## Structure
+## Directory Structure
 
-### `/monitoring/`
-Main monitoring and orchestration scripts.
-- `adk_monitor.py` - ADK Multi-Agent DLQ Monitor System main entry point
-
-### `/setup/`
-Setup and configuration scripts.
-- `quick_setup.sh` - Quick setup script for initial configuration
-
-### Root Scripts
-- `start_monitor.sh` - Main launcher script for all monitoring modes
+```
+scripts/
+├── launch/              # Main application launchers
+│   ├── neurocenter.sh      # BHiveQ NeuroCenter dashboard
+│   └── neurocenter_clean.sh # Clean version (suppresses warnings)
+│
+├── launchers/           # Web dashboard launchers
+│   ├── dashboard.sh        # Terminal dashboard
+│   ├── start_web_clean.sh  # Web dashboard (clean)
+│   ├── start_web_dashboard.sh # Web dashboard
+│   └── web.sh              # Simple web launcher
+│
+├── monitoring/          # ADK and monitoring scripts
+│   ├── adk_monitor.py      # ADK Multi-Agent DLQ Monitor System
+│   ├── adk_monitor_wrapper.py # ADK wrapper
+│   ├── run_adk_monitor.sh  # ADK launcher
+│   └── run_clean.sh        # Clean runner
+│
+├── web/                 # Web-related Python runners
+│   ├── run_neurocenter.py  # NeuroCenter Python runner
+│   ├── run_silent.py       # Silent web runner
+│   ├── run_web.py          # Standard web runner
+│   └── start_web.py        # Web starter
+│
+├── setup/              # Setup and configuration scripts
+│   └── quick_setup.sh      # Quick setup script for initial configuration
+│
+└── Root Scripts
+    ├── start_monitor.sh    # Main launcher script for all monitoring modes
+    ├── stop_all.sh        # Stop all running services
+    └── check_status.sh    # Check service status
+```
 
 ## Usage
 

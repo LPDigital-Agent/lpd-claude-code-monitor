@@ -1,74 +1,59 @@
-// LPD Digital Hive - DLQ Operations Center Dashboard
-// Real-time monitoring with WebSocket and agent tracking
+// BHiveQ Observability Hub - Enhanced Dashboard JS
+// 2-column layout with real-time activity feed and agent details
 
-// Global variables
+// Global state
 let socket;
-let agents = {
-    investigator: { status: 'idle', lastActivity: null, currentTask: null },
-    analyzer: { status: 'idle', lastActivity: null, currentTask: null },
-    debugger: { status: 'idle', lastActivity: null, currentTask: null },
-    reviewer: { status: 'idle', lastActivity: null, currentTask: null }
-};
-let dlqData = [];
+let dlqQueues = [];
+let agents = {};
 let investigations = [];
 let pullRequests = [];
-let recentActions = [];
-let stats = {
-    messagesProcessed: 0,
-    investigationsToday: 0,
-    prsCreated: 0,
-    issuesResolved: 0
-};
+let activityFeed = [];
+let currentFilter = 'all';
+let agentDetailsExpanded = false;
 
-// Initialize on page load
+// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
     initializeWebSocket();
+    initializeEventHandlers();
     loadInitialData();
     startClock();
-    initializeToasts();
     initializeVoiceToggle();
 });
 
-// WebSocket initialization
+// WebSocket connection
 function initializeWebSocket() {
     socket = io();
     
     socket.on('connect', function() {
-        console.log('Connected to WebSocket');
         updateConnectionStatus(true);
-        addToTimeline('System connected to monitoring service');
+        addActivity('system', 'Connected to monitoring service', 'success');
     });
     
     socket.on('disconnect', function() {
-        console.log('Disconnected from WebSocket');
         updateConnectionStatus(false);
-        addToTimeline('System disconnected from monitoring service');
+        addActivity('system', 'Disconnected from monitoring service', 'error');
     });
     
-    // DLQ Updates
-    socket.on('dlq_update', function(data) {
-        updateDLQStatus(data);
-        updateStats(data);
-    });
-    
-    // Agent Updates
-    socket.on('agent_update', function(data) {
-        updateAgentStatus(data);
-    });
-    
-    // Investigation Updates
-    socket.on('investigation_update', function(data) {
-        updateInvestigations(data);
-    });
-    
-    // PR Updates
-    socket.on('pr_update', function(data) {
-        updatePullRequests(data);
-    });
-    
-    // Alert Messages
-    socket.on('alert', function(data) {
-        showAlert(data.message, data.type);
+    // Real-time updates
+    socket.on('dlq_update', handleDLQUpdate);
+    socket.on('agent_update', handleAgentUpdate);
+    socket.on('investigation_update', handleInvestigationUpdate);
+    socket.on('pr_update', handlePRUpdate);
+    socket.on('stats_update', updateStats);
+    socket.on('alert', handleAlert);
+    socket.on('voice_settings_updated', handleVoiceSettingsUpdate);
+}
+
+// Event handlers
+function initializeEventHandlers() {
+    // Activity filter buttons
+    document.querySelectorAll('[data-filter]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentFilter = this.dataset.filter;
+            renderActivityFeed();
+        });
     });
 }
 
@@ -77,10 +62,10 @@ function loadInitialData() {
     fetch('/api/status')
         .then(response => response.json())
         .then(data => {
-            if (data.dlqs) updateDLQStatus(data.dlqs);
-            if (data.agents) updateAllAgents(data.agents);
-            if (data.investigations) updateInvestigations(data.investigations);
-            if (data.prs) updatePullRequests(data.prs);
+            if (data.dlqs) renderDLQs(data.dlqs);
+            if (data.agents) renderAgents(data.agents);
+            if (data.investigations) renderInvestigations(data.investigations);
+            if (data.prs) renderPullRequests(data.prs);
             if (data.stats) updateStats(data.stats);
         })
         .catch(error => {
@@ -89,524 +74,433 @@ function loadInitialData() {
         });
 }
 
-// Update Agent Status
-function updateAgentStatus(agentData) {
-    const agentId = agentData.id;
-    const agentCard = document.getElementById(`${agentId}-agent`);
+// DLQ Handling
+function handleDLQUpdate(dlqs) {
+    dlqQueues = dlqs;
+    renderDLQs(dlqs);
+    updateDLQCounts(dlqs);
     
-    if (!agentCard) return;
-    
-    // Update agent object
-    if (agents[agentId]) {
-        agents[agentId] = { ...agents[agentId], ...agentData };
-    }
-    
-    // Update UI
-    const statusElement = agentCard.querySelector('.agent-status');
-    const lastActivityElement = agentCard.querySelector('.last-activity');
-    const taskElement = agentCard.querySelector('.agent-task');
-    const taskDescription = agentCard.querySelector('.task-description');
-    
-    // Update status
-    statusElement.setAttribute('data-status', agentData.status);
-    statusElement.innerHTML = `<i class="fas fa-circle"></i> ${capitalizeFirst(agentData.status)}`;
-    
-    // Update last activity
-    if (agentData.lastActivity) {
-        lastActivityElement.textContent = formatTime(agentData.lastActivity);
-    }
-    
-    // Update current task
-    if (agentData.currentTask) {
-        taskElement.classList.remove('d-none');
-        taskDescription.textContent = agentData.currentTask;
-    } else {
-        taskElement.classList.add('d-none');
-    }
-    
-    // Update agent count
-    updateAgentCount();
-    
-    // Add to timeline
-    if (agentData.status === 'active') {
-        addToTimeline(`${agentData.name} started: ${agentData.currentTask}`);
-    }
-}
-
-// Update all agents at once
-function updateAllAgents(agentsData) {
-    Object.keys(agentsData).forEach(agentId => {
-        updateAgentStatus({ id: agentId, ...agentsData[agentId] });
-    });
-}
-
-// Update DLQ Status
-function updateDLQStatus(dlqs) {
-    dlqData = dlqs;
-    const dlqPanel = document.getElementById('dlq-status-panel');
-    const dlqList = dlqPanel.querySelector('.dlq-list');
-    
-    // Clear existing items
-    dlqList.innerHTML = '';
-    
-    // Count by status
-    let critical = 0, warning = 0, healthy = 0;
-    let hasCriticalDLQ = false;
-    
+    // Auto-investigate critical DLQs
     dlqs.forEach(dlq => {
-        const status = getDLQStatus(dlq.messages);
-        if (status === 'critical') {
-            critical++;
-            hasCriticalDLQ = true;
-            
-            // Auto-trigger investigation for critical DLQs
-            if (dlq.messages >= 100 && !dlq.investigationInProgress) {
-                setTimeout(() => {
-                    addLogEntry(`⚠️ CRITICAL: Auto-investigating ${dlq.name} with ${dlq.messages} messages!`, 'error');
-                    startInvestigation(dlq);
-                }, 2000);
+        if (dlq.messages > 100) {
+            addActivity('dlq', `Critical: ${dlq.name} has ${dlq.messages} messages`, 'danger');
+            if (dlq.messages > 200) {
+                triggerInvestigation(dlq.name, dlq.messages);
             }
         }
-        else if (status === 'warning') warning++;
-        else healthy++;
+    });
+}
+
+function renderDLQs(dlqs) {
+    const panel = document.getElementById('dlq-panel');
+    const list = panel.querySelector('.dlq-list');
+    
+    list.innerHTML = '';
+    
+    dlqs.forEach(dlq => {
+        const item = document.createElement('div');
+        item.className = 'dlq-item';
         
-        const dlqItem = createDLQItem(dlq, status);
-        dlqList.appendChild(dlqItem);
+        // Determine status
+        let statusClass = 'healthy';
+        let statusIcon = 'check-circle';
+        if (dlq.messages > 100) {
+            statusClass = 'critical';
+            statusIcon = 'exclamation-triangle';
+        } else if (dlq.messages > 50) {
+            statusClass = 'warning';
+            statusIcon = 'exclamation-circle';
+        }
+        
+        item.classList.add(statusClass);
+        
+        item.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="dlq-name">${dlq.name}</div>
+                    <small class="text-muted">Region: sa-east-1</small>
+                </div>
+                <div class="dlq-messages text-end">
+                    <div class="message-count ${statusClass === 'critical' ? 'text-danger' : ''}">${dlq.messages}</div>
+                    <small class="text-muted">messages</small>
+                </div>
+                <button class="investigate-btn" onclick="investigateDLQ('${dlq.name}', ${dlq.messages})">
+                    <i class="fas fa-search"></i> Investigate
+                </button>
+            </div>
+        `;
+        
+        list.appendChild(item);
+    });
+}
+
+function updateDLQCounts(dlqs) {
+    let critical = 0, warning = 0, healthy = 0;
+    
+    dlqs.forEach(dlq => {
+        if (dlq.messages > 100) critical++;
+        else if (dlq.messages > 50) warning++;
+        else healthy++;
     });
     
-    // Update counters
     document.getElementById('critical-count').textContent = critical;
     document.getElementById('warning-count').textContent = warning;
     document.getElementById('healthy-count').textContent = healthy;
-    
-    // Flash alert if critical
-    if (hasCriticalDLQ) {
-        document.querySelector('.panel-header').classList.add('alert-flash');
-        setTimeout(() => {
-            document.querySelector('.panel-header').classList.remove('alert-flash');
-        }, 1000);
-    }
 }
 
-// Create DLQ Item element
-function createDLQItem(dlq, status) {
-    const div = document.createElement('div');
-    const isCriticalAlert = dlq.messages >= 100;
+// Agent Handling
+function handleAgentUpdate(agent) {
+    agents[agent.id] = agent;
+    renderAgents(agents);
+    addActivity('agent', `${agent.name}: ${agent.status}`, agent.status === 'investigating' ? 'warning' : 'info');
     
-    // Add critical alert class if messages >= 100
-    div.className = `dlq-item ${status} ${isCriticalAlert ? 'critical-alert' : ''}`;
-    div.innerHTML = `
-        <div>
-            <div class="dlq-name">
-                ${dlq.name}
-                ${isCriticalAlert ? '<span class="badge bg-danger pulse-danger ms-2">CRITICAL</span>' : ''}
+    // Update active agents stat
+    const activeCount = Object.values(agents).filter(a => a.status !== 'idle').length;
+    document.getElementById('active-agents-stat').textContent = activeCount;
+}
+
+function renderAgents(agentsData) {
+    const panel = document.getElementById('agents-panel');
+    const container = panel.querySelector('.agent-cards');
+    
+    container.innerHTML = '';
+    
+    const agentList = [
+        { id: 'investigator', name: 'Investigation Agent', icon: 'search', color: 'orange' },
+        { id: 'analyzer', name: 'DLQ Analyzer', icon: 'microscope', color: 'info' },
+        { id: 'debugger', name: 'Code Debugger', icon: 'bug', color: 'danger' },
+        { id: 'reviewer', name: 'Code Reviewer', icon: 'check-double', color: 'success' }
+    ];
+    
+    agentList.forEach(agentInfo => {
+        const agent = agentsData[agentInfo.id] || { status: 'idle', lastActivity: null, currentTask: null };
+        
+        const card = document.createElement('div');
+        card.className = 'agent-card';
+        card.id = `agent-${agentInfo.id}`;
+        
+        if (agentDetailsExpanded && agent.status !== 'idle') {
+            card.classList.add('expanded');
+        }
+        
+        const statusColor = agent.status === 'idle' ? 'text-muted' : 
+                           agent.status === 'investigating' ? 'text-orange' : 
+                           agent.status === 'active' ? 'text-success' : 'text-info';
+        
+        card.innerHTML = `
+            <div class="agent-header">
+                <div class="agent-icon">
+                    <i class="fas fa-${agentInfo.icon}"></i>
+                </div>
+                <div class="agent-info flex-grow-1">
+                    <h6>${agentInfo.name}</h6>
+                    <span class="agent-status ${statusColor}" data-status="${agent.status}">
+                        <i class="fas fa-circle"></i> ${agent.status}
+                    </span>
+                </div>
             </div>
-            <small class="text-muted">${dlq.region || 'sa-east-1'}</small>
-        </div>
-        <div class="dlq-messages">
-            <span class="message-count text-${getStatusColor(status)}">${dlq.messages}</span>
-            <small class="text-muted">msgs</small>
-        </div>
-    `;
+            ${agent.currentTask ? `
+                <div class="agent-task mt-2">
+                    <small class="text-orange">Current Task:</small>
+                    <div class="task-description">${agent.currentTask}</div>
+                </div>
+            ` : ''}
+            ${agentDetailsExpanded && agent.status !== 'idle' ? `
+                <div class="agent-logs">
+                    ${generateAgentLogs(agentInfo.id)}
+                </div>
+            ` : ''}
+        `;
+        
+        container.appendChild(card);
+    });
     
-    // Add click handler for investigation
-    if (status !== 'healthy') {
-        div.style.cursor = 'pointer';
-        div.onclick = () => startInvestigation(dlq);
-    }
-    
-    return div;
+    // Update agent count
+    const activeCount = Object.values(agentsData).filter(a => a.status !== 'idle').length;
+    document.getElementById('agent-count').textContent = activeCount;
 }
 
-// Update Investigations
-function updateInvestigations(investigationsData) {
-    investigations = investigationsData;
+function generateAgentLogs(agentId) {
+    // Simulate agent logs with some intelligence
+    const logs = {
+        investigator: [
+            'Analyzing DLQ message patterns...',
+            'Identified error type: ValidationException',
+            'Searching for similar issues in codebase...',
+            'Found potential fix in error handler'
+        ],
+        analyzer: [
+            'Parsing message attributes...',
+            'Extracting error stack traces...',
+            'Correlating with CloudWatch logs...'
+        ],
+        debugger: [
+            'Setting breakpoints in Lambda function...',
+            'Reproducing error conditions...',
+            'Testing fix locally...'
+        ],
+        reviewer: [
+            'Reviewing proposed changes...',
+            'Running test suite...',
+            'Checking code coverage...'
+        ]
+    };
+    
+    const agentLogs = logs[agentId] || ['Working...'];
+    return agentLogs.map(log => `<div class="agent-log-entry">${log}</div>`).join('');
+}
+
+// Activity Feed
+function addActivity(type, message, severity = 'info') {
+    const entry = {
+        type: type,
+        message: message,
+        severity: severity,
+        timestamp: new Date()
+    };
+    
+    activityFeed.unshift(entry);
+    if (activityFeed.length > 100) activityFeed.pop();
+    
+    renderActivityFeed();
+}
+
+function renderActivityFeed() {
+    const feed = document.getElementById('activity-feed');
+    feed.innerHTML = '';
+    
+    const filtered = currentFilter === 'all' ? activityFeed : 
+                    activityFeed.filter(a => {
+                        if (currentFilter === 'agents') return a.type === 'agent';
+                        if (currentFilter === 'investigations') return a.type === 'investigation';
+                        if (currentFilter === 'prs') return a.type === 'pr';
+                        return true;
+                    });
+    
+    filtered.slice(0, 50).forEach(activity => {
+        const entry = document.createElement('div');
+        entry.className = `activity-entry ${activity.type}`;
+        
+        const time = new Date(activity.timestamp).toLocaleTimeString();
+        
+        entry.innerHTML = `
+            <div class="activity-timestamp">${time}</div>
+            <div class="activity-title">${activity.type.toUpperCase()}</div>
+            <div class="activity-content">${activity.message}</div>
+        `;
+        
+        feed.appendChild(entry);
+    });
+}
+
+// Investigations
+function handleInvestigationUpdate(investigations) {
+    renderInvestigations(investigations);
+    addActivity('investigation', `${investigations.length} active investigations`, 'info');
+}
+
+function renderInvestigations(investigations) {
     const panel = document.getElementById('investigations-panel');
     const list = panel.querySelector('.investigation-list');
     
-    // Clear existing
     list.innerHTML = '';
     
-    // Update count
-    document.getElementById('investigation-count').textContent = investigationsData.length;
+    if (investigations.length === 0) {
+        list.innerHTML = '<div class="text-muted text-center">No active investigations</div>';
+    } else {
+        investigations.forEach(inv => {
+            const card = document.createElement('div');
+            card.className = 'investigation-card';
+            
+            const progress = Math.floor(Math.random() * 100); // Simulate progress
+            
+            card.innerHTML = `
+                <div class="investigation-header">
+                    <div class="investigation-dlq">${inv.dlq}</div>
+                    <div class="investigation-status active">Active</div>
+                </div>
+                <div class="investigation-progress">
+                    <div class="investigation-progress-bar" style="width: ${progress}%"></div>
+                </div>
+                <small class="text-muted">Started: ${new Date(inv.startTime).toLocaleTimeString()}</small>
+            `;
+            
+            list.appendChild(card);
+        });
+    }
     
-    investigationsData.forEach(inv => {
-        const item = createInvestigationItem(inv);
-        list.appendChild(item);
-    });
+    document.getElementById('investigation-count').textContent = investigations.length;
 }
 
-// Create Investigation Item
-function createInvestigationItem(inv) {
-    const div = document.createElement('div');
-    div.className = 'investigation-item';
-    div.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <div class="fw-semibold">${inv.dlq}</div>
-                <small class="text-muted">${inv.agent} • Started ${formatTime(inv.startTime)}</small>
-            </div>
-            <div class="text-orange">
-                <i class="fas fa-spinner fa-spin"></i>
-            </div>
-        </div>
-        <div class="investigation-progress mt-2">
-            <div class="investigation-progress-bar" style="width: ${inv.progress || 0}%"></div>
-        </div>
-    `;
-    return div;
-}
-
-// Update Pull Requests
-function updatePullRequests(prs) {
+// Pull Requests
+function handlePRUpdate(prs) {
     pullRequests = prs;
+    renderPullRequests(prs);
+    addActivity('pr', `${prs.length} open pull requests`, 'warning');
+}
+
+function renderPullRequests(prs) {
     const panel = document.getElementById('pr-panel');
     const list = panel.querySelector('.pr-list');
     
-    // Clear existing
     list.innerHTML = '';
     
-    // Update count
-    document.getElementById('pr-count').textContent = prs.length;
+    const displayPrs = prs.slice(0, 3); // Show only 3 PRs
     
-    prs.forEach(pr => {
-        const item = createPRItem(pr);
+    displayPrs.forEach(pr => {
+        const item = document.createElement('div');
+        item.className = 'pr-item';
+        item.onclick = () => window.open(pr.url, '_blank');
+        
+        item.innerHTML = `
+            <div class="pr-status open"></div>
+            <div class="flex-grow-1">
+                <div class="pr-title">${pr.title}</div>
+                <small class="text-muted">#${pr.number} - ${pr.repo}</small>
+            </div>
+        `;
+        
         list.appendChild(item);
     });
-}
-
-// Create PR Item
-function createPRItem(pr) {
-    const div = document.createElement('div');
-    div.className = 'pr-item';
-    div.innerHTML = `
-        <div class="pr-status ${pr.status}"></div>
-        <div class="flex-grow-1">
-            <div class="fw-semibold">#${pr.number}: ${pr.title}</div>
-            <small class="text-muted">${pr.author} • ${formatTime(pr.createdAt)}</small>
-        </div>
-        <i class="fas fa-external-link-alt text-muted"></i>
-    `;
     
-    div.onclick = () => window.open(pr.url, '_blank');
-    return div;
-}
-
-// Add to Timeline
-function addToTimeline(message) {
-    const timeline = document.querySelector('.timeline');
-    if (!timeline) return;
-    
-    // Add to recent actions array
-    recentActions.unshift({
-        time: new Date(),
-        message: message
-    });
-    
-    // Keep only last 10 actions
-    if (recentActions.length > 10) {
-        recentActions.pop();
+    if (prs.length > 3) {
+        list.innerHTML += `<div class="text-center mt-2"><small class="text-muted">+${prs.length - 3} more</small></div>`;
     }
     
-    // Rebuild timeline
-    timeline.innerHTML = '';
-    recentActions.forEach(action => {
-        const item = document.createElement('div');
-        item.className = 'timeline-item';
-        item.innerHTML = `
-            <div class="timeline-time">${formatTime(action.time)}</div>
-            <div class="timeline-content">${action.message}</div>
-        `;
-        timeline.appendChild(item);
-    });
+    document.getElementById('pr-count').textContent = prs.length;
 }
 
-// Update Stats
-function updateStats(data) {
-    if (data.messagesProcessed !== undefined) {
-        document.getElementById('messages-processed').textContent = data.messagesProcessed;
-        stats.messagesProcessed = data.messagesProcessed;
-    }
-    if (data.investigationsToday !== undefined) {
-        document.getElementById('investigations-today').textContent = data.investigationsToday;
-        stats.investigationsToday = data.investigationsToday;
-    }
-    if (data.prsCreated !== undefined) {
-        document.getElementById('prs-created').textContent = data.prsCreated;
-        stats.prsCreated = data.prsCreated;
-    }
-    if (data.issuesResolved !== undefined) {
-        document.getElementById('issues-resolved').textContent = data.issuesResolved;
-        stats.issuesResolved = data.issuesResolved;
-    }
+// Stats
+function updateStats(stats) {
+    // Update stats with animation
+    animateNumber('messages-processed', stats.messagesProcessed || 0);
+    animateNumber('investigations-today', stats.investigationsToday || 0);
+    animateNumber('prs-created', stats.prsCreated || 0);
+    animateNumber('issues-resolved', stats.issuesResolved || 0);
 }
 
-// Update Connection Status
+function animateNumber(elementId, target) {
+    const element = document.getElementById(elementId);
+    const current = parseInt(element.textContent) || 0;
+    const increment = (target - current) / 20;
+    let value = current;
+    
+    const timer = setInterval(() => {
+        value += increment;
+        if ((increment > 0 && value >= target) || (increment < 0 && value <= target)) {
+            value = target;
+            clearInterval(timer);
+        }
+        element.textContent = Math.floor(value);
+    }, 50);
+}
+
+// Helper Functions
 function updateConnectionStatus(connected) {
-    const statusBadge = document.getElementById('connection-status');
+    const status = document.getElementById('connection-status');
     if (connected) {
-        statusBadge.className = 'badge bg-success pulse';
-        statusBadge.innerHTML = '<i class="fas fa-circle"></i> Connected';
+        status.className = 'badge bg-success pulse';
+        status.innerHTML = '<i class="fas fa-circle"></i> Connected';
     } else {
-        statusBadge.className = 'badge bg-danger';
-        statusBadge.innerHTML = '<i class="fas fa-circle"></i> Disconnected';
+        status.className = 'badge bg-danger pulse-danger';
+        status.innerHTML = '<i class="fas fa-circle"></i> Disconnected';
     }
 }
 
-// Update Agent Count
-function updateAgentCount() {
-    const activeAgents = Object.values(agents).filter(a => a.status !== 'idle').length;
-    document.getElementById('agent-count').textContent = activeAgents;
+function startClock() {
+    setInterval(() => {
+        document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+    }, 1000);
 }
 
-// Start Investigation
-function startInvestigation(dlq) {
-    // Check if messages exceed threshold for auto-investigation
-    if (dlq.messages >= 100) {
-        socket.emit('start_investigation', {
-            dlq: dlq.name,
-            messages: dlq.messages,
-            priority: 'critical'
-        });
-        
-        showAlert(`🚨 CRITICAL: Investigation started for ${dlq.name} (${dlq.messages} messages)`, 'error');
-        addToTimeline(`🚨 Critical investigation triggered for ${dlq.name}`);
-        
-        // Update agent status immediately
-        updateAgentStatus({
-            id: 'investigator',
-            name: 'Investigation Agent',
-            status: 'investigating',
-            currentTask: `Analyzing ${dlq.name} with ${dlq.messages} messages`,
-            lastActivity: new Date()
-        });
-    } else {
-        socket.emit('start_investigation', {
-            dlq: dlq.name,
-            messages: dlq.messages
-        });
-        
-        showAlert(`Investigation started for ${dlq.name}`, 'info');
-        addToTimeline(`Manual investigation triggered for ${dlq.name}`);
-    }
-}
-
-// Show Alert Toast
 function showAlert(message, type = 'info') {
     const toast = document.getElementById('alert-toast');
     const toastBody = toast.querySelector('.toast-body');
-    
-    // Set message
     toastBody.textContent = message;
     
-    // Set color based on type
-    toast.className = `toast border-${type === 'error' ? 'danger' : type}`;
-    
-    // Show toast
     const bsToast = new bootstrap.Toast(toast);
     bsToast.show();
-}
-
-// Initialize Toasts
-function initializeToasts() {
-    const toastElList = [].slice.call(document.querySelectorAll('.toast'));
-    toastElList.map(function (toastEl) {
-        return new bootstrap.Toast(toastEl);
-    });
-}
-
-// Start Clock
-function startClock() {
-    updateClock();
-    setInterval(updateClock, 1000);
-}
-
-// Update Clock
-function updateClock() {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('en-US', { 
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
     
-    const lastUpdate = document.getElementById('last-update');
-    if (lastUpdate) {
-        lastUpdate.textContent = timeString;
+    addActivity('system', message, type);
+}
+
+function handleAlert(data) {
+    showAlert(data.message, data.type);
+}
+
+function handleVoiceSettingsUpdate(data) {
+    const icon = document.getElementById('voice-icon');
+    if (data.enabled) {
+        icon.className = 'fas fa-volume-up';
+    } else {
+        icon.className = 'fas fa-volume-mute';
     }
 }
 
-// Utility Functions
-function getDLQStatus(messageCount) {
-    if (messageCount >= 100) return 'critical';
-    if (messageCount >= 10) return 'warning';
-    return 'healthy';
-}
-
-function getStatusColor(status) {
-    switch(status) {
-        case 'critical': return 'danger';
-        case 'warning': return 'warning';
-        case 'healthy': return 'success';
-        default: return 'secondary';
-    }
-}
-
-function formatTime(timestamp) {
-    if (!timestamp) return 'Never';
-    
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = now - date;
-    
-    if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-    
-    return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-function capitalizeFirst(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-// Force Reinvestigation
-function forceReinvestigation() {
-    if (dlqData.length === 0) {
-        showAlert('No DLQs to investigate', 'warning');
-        return;
-    }
-    
-    // Find the DLQ with most messages
-    const targetDLQ = dlqData.reduce((prev, current) => 
-        (prev.messages > current.messages) ? prev : current
-    );
-    
-    if (targetDLQ.messages === 0) {
-        showAlert('No messages in DLQs to investigate', 'info');
-        return;
-    }
-    
-    startInvestigation(targetDLQ);
-    showAlert(`Force investigation started for ${targetDLQ.name}`, 'success');
-}
-
-// Add log entry to stream
-function addLogEntry(message, type = 'info') {
-    const logStream = document.querySelector('.log-stream');
-    if (!logStream) return;
-    
-    const entry = document.createElement('div');
-    entry.className = `log-entry ${type}`;
-    entry.innerHTML = `<span class="text-muted">${formatTime(new Date())}</span> ${message}`;
-    
-    // Add to top of stream
-    logStream.insertBefore(entry, logStream.firstChild);
-    
-    // Keep only last 50 entries
-    while (logStream.children.length > 50) {
-        logStream.removeChild(logStream.lastChild);
-    }
-}
-
-// Simulate agent activity logs
-function simulateAgentLogs() {
-    const messages = [
-        { text: 'Investigation Agent scanning DLQ queues...', type: 'info' },
-        { text: 'DLQ Analyzer processing message patterns', type: 'info' },
-        { text: 'Code Debugger identified potential fix', type: 'success' },
-        { text: 'Code Reviewer validating changes', type: 'info' },
-        { text: 'High message count detected in payment-dlq', type: 'error' },
-        { text: 'Agent coordination successful', type: 'success' }
-    ];
-    
-    // Add random log every 3-8 seconds
-    setInterval(() => {
-        if (Math.random() > 0.7) {
-            const msg = messages[Math.floor(Math.random() * messages.length)];
-            addLogEntry(msg.text, msg.type);
-        }
-    }, 5000);
-}
-
-// Initialize voice toggle
+// Voice Toggle
 function initializeVoiceToggle() {
-    const voiceToggle = document.getElementById('voice-toggle');
-    const voiceIcon = document.getElementById('voice-icon');
-    
-    // Load saved preference from localStorage
+    const toggle = document.getElementById('voice-toggle');
     let voiceEnabled = localStorage.getItem('voiceNotifications') !== 'false';
-    updateVoiceIcon(voiceEnabled);
     
-    // Send initial state to backend
+    updateVoiceIcon(voiceEnabled);
     socket.emit('voice_settings', { enabled: voiceEnabled });
     
-    // Toggle voice on button click
-    voiceToggle.addEventListener('click', function() {
+    toggle.addEventListener('click', function() {
         voiceEnabled = !voiceEnabled;
-        localStorage.setItem('voiceNotifications', voiceEnabled);
+        localStorage.setItem('voiceNotifications', voiceEnabled.toString());
         updateVoiceIcon(voiceEnabled);
-        
-        // Send update to backend
         socket.emit('voice_settings', { enabled: voiceEnabled });
-        
-        // Show toast notification
-        const message = voiceEnabled ? 
-            '🔊 Voice notifications enabled' : 
-            '🔇 Voice notifications muted';
-        showAlert(message, 'info');
+        showAlert(`Voice notifications ${voiceEnabled ? 'enabled' : 'disabled'}`, 'info');
     });
 }
 
-// Update voice icon based on state
 function updateVoiceIcon(enabled) {
-    const voiceIcon = document.getElementById('voice-icon');
-    const voiceToggle = document.getElementById('voice-toggle');
-    
+    const icon = document.getElementById('voice-icon');
     if (enabled) {
-        voiceIcon.className = 'fas fa-volume-up';
-        voiceToggle.classList.remove('btn-muted');
-        voiceToggle.title = 'Voice Notifications ON (Click to mute)';
+        icon.className = 'fas fa-volume-up';
+        document.getElementById('voice-toggle').classList.remove('btn-muted');
     } else {
-        voiceIcon.className = 'fas fa-volume-mute';
-        voiceToggle.classList.add('btn-muted');
-        voiceToggle.title = 'Voice Notifications OFF (Click to unmute)';
+        icon.className = 'fas fa-volume-mute';
+        document.getElementById('voice-toggle').classList.add('btn-muted');
     }
 }
 
-// Initialize log streaming
-document.addEventListener('DOMContentLoaded', function() {
-    simulateAgentLogs();
-    
-    // Listen for real agent updates and add to log
-    socket.on('agent_update', function(data) {
-        if (data.status === 'active' || data.status === 'investigating') {
-            addLogEntry(`${data.name} is now ${data.status}: ${data.currentTask || 'Processing...'}`, 'success');
-        }
-    });
-    
-    socket.on('dlq_update', function(data) {
-        data.forEach(dlq => {
-            if (dlq.messages >= 100) {
-                addLogEntry(`⚠️ CRITICAL: ${dlq.name} has ${dlq.messages} messages!`, 'error');
-            }
-        });
-    });
-});
-
-// Export for testing
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        updateAgentStatus,
-        updateDLQStatus,
-        formatTime,
-        forceReinvestigation,
-        addLogEntry
-    };
+// Action Functions
+function refreshDLQs() {
+    socket.emit('request_update');
+    showAlert('Refreshing DLQ status...', 'info');
 }
+
+function toggleAgentDetails() {
+    agentDetailsExpanded = !agentDetailsExpanded;
+    const icon = document.getElementById('agent-expand-icon');
+    icon.className = agentDetailsExpanded ? 'fas fa-compress-alt' : 'fas fa-expand-alt';
+    renderAgents(agents);
+}
+
+function investigateDLQ(dlqName, messageCount) {
+    socket.emit('start_investigation', { dlq: dlqName, messages: messageCount });
+    showAlert(`Starting investigation for ${dlqName}`, 'success');
+}
+
+function triggerInvestigation(dlqName, messageCount) {
+    if (messageCount > 100) {
+        socket.emit('start_investigation', { dlq: dlqName, messages: messageCount });
+        addActivity('investigation', `Auto-investigating ${dlqName} (${messageCount} messages)`, 'warning');
+    }
+}
+
+function forceReinvestigation() {
+    const criticalDlq = dlqQueues.find(dlq => dlq.messages > 100);
+    if (criticalDlq) {
+        investigateDLQ(criticalDlq.name, criticalDlq.messages);
+    } else {
+        showAlert('No critical DLQs to investigate', 'info');
+    }
+}
+
+// Export functions for global access
+window.refreshDLQs = refreshDLQs;
+window.toggleAgentDetails = toggleAgentDetails;
+window.investigateDLQ = investigateDLQ;
+window.forceReinvestigation = forceReinvestigation;

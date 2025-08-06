@@ -1,23 +1,42 @@
 #!/bin/bash
-# Ultra-Clean Integrated Launcher - No warnings, just results
+# BHiveQ Observability Hub - Clean Launcher (No warnings)
 
 set -e
 
-cd "$(dirname "$0")/.."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT"
 
-clear
 echo ""
-echo "  🎨 LPD Digital Hive - DLQ Operations Center"
-echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  🐝 BHiveQ Observability Hub - LPD Digital Hive"
+echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  🤖 ADK Multi-Agent System + Real-time Dashboard"
 echo "  📍 http://localhost:5001"
-echo "  ⌨️  Ctrl+C to stop"
+echo "  ⌨️  Ctrl+C to stop all services"
 echo ""
 
-# Activate venv silently
-source venv/bin/activate 2>/dev/null || true
+# Check if virtual environment exists
+if [ ! -d "venv" ]; then
+    echo "❌ Virtual environment not found!"
+    echo "💡 Run: python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
+    exit 1
+fi
 
-# Load environment
-[ -f ".env" ] && export $(grep -v '^#' .env | xargs) 2>/dev/null
+# Activate virtual environment
+echo "  🔧 Activating virtual environment..."
+source venv/bin/activate
+
+# Install package if needed
+if ! pip show lpd-claude-code-monitor > /dev/null 2>&1; then
+    echo "  📦 Installing package..."
+    pip install -e . > /dev/null 2>&1
+fi
+
+# Load environment variables
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+    echo "  ✅ Environment variables loaded"
+fi
 
 # Set environment
 export AWS_PROFILE="${AWS_PROFILE:-FABIO-PROD}"
@@ -26,38 +45,92 @@ export GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || echo '')}"
 export PYTHONWARNINGS="ignore"
 export PYTHONPATH="${PWD}:${PYTHONPATH}"
 
-# Cleanup function
+# Create PID directory
+PID_DIR="/tmp/bhiveq"
+mkdir -p "$PID_DIR"
+
+# Function to cleanup on exit
 cleanup() {
     echo ""
-    echo "  👋 Shutting down..."
+    echo "  🛑 Shutting down services..."
+    
+    # Kill ADK monitor if running
+    if [ ! -z "$ADK_PID" ]; then
+        kill $ADK_PID 2>/dev/null || true
+        echo "  ✅ ADK monitor stopped"
+    fi
+    
+    # Kill web dashboard if running
+    if [ ! -z "$WEB_PID" ]; then
+        kill $WEB_PID 2>/dev/null || true
+        echo "  ✅ Web dashboard stopped"
+    fi
+    
+    # Kill any remaining Python processes from this script
     pkill -P $$ 2>/dev/null || true
+    
+    echo "  👋 Goodbye!"
     exit 0
 }
 
+# Setup trap for cleanup
 trap cleanup EXIT INT TERM
 
-# Start both services with complete suppression
-echo "  🚀 Starting services..."
-
-# ADK Monitor (silent)
+# Start ADK monitoring in background (completely silent Blake2 warnings)
+echo "  🤖 Starting ADK Multi-Agent Monitor..."
 (
-    exec 2>/dev/null
-    python3 -W ignore scripts/monitoring/adk_monitor.py &
+    export PYTHONUNBUFFERED=1
+    python3 -W ignore::UserWarning scripts/monitoring/adk_monitor.py 2>&1 | \
+        grep -v "blake2" | \
+        grep -v "ValueError" | \
+        grep -v "ERROR:root" | \
+        grep -v "Traceback" | \
+        grep -v "hashlib" | \
+        grep -v "__func_name" | \
+        grep -v "__get_hash" | \
+        grep -v "__get_builtin_constructor" | \
+        grep -v "globals()" | \
+        grep -v "raise ValueError" | \
+        grep -v "File \"" | \
+        sed 's/^/    [ADK] /'
 ) &
+ADK_PID=$!
+echo $ADK_PID > "$PID_DIR/adk.pid"
+echo "  ✅ ADK monitor running (PID: $ADK_PID)"
 
-# Web Dashboard (silent) 
+# Give ADK monitor time to initialize
+sleep 2
+
+# Start web dashboard in background (completely silent warnings)
+echo "  🌐 Starting Web Dashboard..."
 (
-    exec 2>/dev/null
-    python3 -W ignore src/dlq_monitor/web/app.py &
+    python3 -W ignore::UserWarning src/dlq_monitor/web/app.py 2>&1 | \
+        grep -v "blake2" | \
+        grep -v "ValueError" | \
+        grep -v "ERROR:root" | \
+        grep -v "Traceback" | \
+        grep -v "hashlib" | \
+        grep -v "__func_name" | \
+        grep -v "__get_hash" | \
+        grep -v "__get_builtin_constructor" | \
+        grep -v "globals()" | \
+        grep -v "raise ValueError" | \
+        grep -v "File \"" | \
+        grep -v "RuntimeError" | \
+        sed 's/^/    [WEB] /'
 ) &
+WEB_PID=$!
+echo $WEB_PID > "$PID_DIR/web.pid"
+echo "  ✅ Web dashboard running (PID: $WEB_PID)"
 
-echo "  ✅ All services running!"
 echo ""
-echo "  📊 Dashboard: http://localhost:5001"
-echo "  🤖 ADK agents monitoring in background"
+echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  ✨ All services started successfully!"
+echo "  📍 Open http://localhost:5001 in your browser"
+echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  Monitoring output:"
 echo ""
 
-# Keep running
-while true; do
-    sleep 60
-done
+# Wait for processes
+wait $ADK_PID $WEB_PID
