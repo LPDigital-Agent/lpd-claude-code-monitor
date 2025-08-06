@@ -77,9 +77,12 @@ trap cleanup EXIT INT TERM
 echo "  🤖 Starting ADK Multi-Agent Monitor..."
 (
     export PYTHONUNBUFFERED=1
-    python3 scripts/monitoring/adk_monitor.py 2>&1 | \
-        grep -v "Blake2" | \
+    python3 -W ignore::UserWarning scripts/monitoring/adk_monitor.py 2>&1 | \
+        grep -v "blake2" | \
         grep -v "ValueError" | \
+        grep -v "ERROR:root" | \
+        grep -v "Traceback" | \
+        grep -v "hashlib" | \
         sed 's/^/    [ADK] /' &
 ) &
 ADK_PID=$!
@@ -91,10 +94,14 @@ sleep 2
 # Start web dashboard in background
 echo "  🌐 Starting Web Dashboard..."
 (
-    python3 src/dlq_monitor/web/app.py 2>&1 | \
-        grep -v "Blake2" | \
+    python3 -W ignore::UserWarning src/dlq_monitor/web/app.py 2>&1 | \
+        grep -v "blake2" | \
         grep -v "ValueError" | \
         grep -v "WARNING" | \
+        grep -v "ERROR:root" | \
+        grep -v "Traceback" | \
+        grep -v "hashlib" | \
+        grep -v "RuntimeError" | \
         sed 's/^/    [WEB] /' &
 ) &
 WEB_PID=$!

@@ -515,4 +515,8 @@ if __name__ == '__main__':
     # Use port 5001 to avoid conflict with macOS AirPlay Receiver
     port = int(os.environ.get('FLASK_PORT', 5001))
     logger.info(f"🚀 Starting Enhanced DLQ Web Dashboard on http://localhost:{port}")
-    socketio.run(app, debug=True, host='0.0.0.0', port=port)
+    
+    # Allow unsafe werkzeug for local development
+    # In production, use a proper WSGI server like gunicorn
+    socketio.run(app, debug=False, host='0.0.0.0', port=port, 
+                 allow_unsafe_werkzeug=True, log_output=False)
