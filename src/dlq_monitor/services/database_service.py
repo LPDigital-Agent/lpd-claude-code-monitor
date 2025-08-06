@@ -90,6 +90,27 @@ class DatabaseService:
     
     # Agent Operations
     
+    def register_agent(self, agent_id: str, name: str, description: str, agent_type: str):
+        """Register an agent in the database"""
+        with self.get_session() as session:
+            agent = session.query(Agent).filter_by(agent_id=agent_id).first()
+            if not agent:
+                agent = Agent(
+                    agent_id=agent_id,
+                    name=name,
+                    description=description,
+                    agent_type=agent_type,
+                    status='idle',
+                    created_at=datetime.now()
+                )
+                session.add(agent)
+            else:
+                # Update existing agent
+                agent.name = name
+                agent.description = description
+                agent.agent_type = agent_type
+            session.commit()
+    
     def get_all_agents(self) -> List[Dict[str, Any]]:
         """Get all agents with their current status"""
         with self.get_session() as session:
