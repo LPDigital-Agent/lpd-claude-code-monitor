@@ -3,10 +3,22 @@ requires = ["setuptools>=61.0", "setuptools_scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["src/dlq_monitor", "adk_agents"]
+package-dir = {"" = "src"}
 include-package-data = true
 
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["dlq_monitor*"]
+exclude = ["tests*"]
+
 [tool.setuptools.package-data]
+dlq_monitor = [
+    "config/*.yaml",
+    "config/*.yml", 
+    "docs/*.md",
+    "templates/*.html",
+    "templates/*.txt",
+]
 "*" = ["*.yaml", "*.json", "*.md"]
 
 [project]
@@ -83,22 +95,6 @@ dlq-live = "dlq_monitor.claude.live_monitor:main"
 dlq-status = "dlq_monitor.claude.status_checker:main"
 dlq-investigate = "dlq_monitor.claude.manual_investigation:main"
 dlq-setup = "dlq_monitor.utils.github_setup:main"
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["dlq_monitor*"]
-exclude = ["tests*"]
-
-[tool.setuptools.package-data]
-dlq_monitor = [
-    "config/*.yaml",
-    "config/*.yml", 
-    "docs/*.md",
-    "scripts/*.sh",
-]
 
 # Black code formatter
 [tool.black]

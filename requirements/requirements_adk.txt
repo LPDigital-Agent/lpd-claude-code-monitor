@@ -4,8 +4,9 @@
 google-adk>=1.0.0
 
 # AWS MCP Servers for AWS integration
-awslabs.aws-api-mcp-server>=1.0.0
-awslabs.amazon-sns-sqs-mcp-server>=1.0.0
+# Note: These are optional - MCP servers are typically installed via npx or pip separately
+# awslabs.aws-api-mcp-server>=0.2.2
+# awslabs.amazon-sns-sqs-mcp-server>=0.1.0
 
 # AWS SDK (for additional operations)
 boto3>=1.26.0
@@ -21,7 +22,7 @@ python-dotenv>=1.0.0
 
 # Async support
 aiofiles>=23.0.0
-asyncio>=3.4.3
+# asyncio is part of the standard library (no need to install)
 
 # MCP client (if needed for custom integration)
 mcp>=0.1.0
