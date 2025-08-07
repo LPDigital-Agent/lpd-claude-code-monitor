@@ -257,15 +257,15 @@ body.neurocenter-body {
     padding: 0 4px;
 }
 
-/* Main Container - Custom Layout for NeuroCenter */
+/* Main Container - Equal Distribution Layout */
 .neurocenter-container {
     display: grid !important;
-    grid-template-columns: 40% 30% 30% !important;  /* 3 columns: agents, dlqs, timeline */
-    grid-auto-rows: auto !important;
+    grid-template-columns: 50% 50% !important;  /* 2 equal columns */
+    grid-template-rows: 50% 50% !important;  /* 2 equal rows to fill viewport */
     gap: 16px !important;
     padding: 110px 20px 20px !important;
     width: 100% !important;
-    min-height: 100vh !important;
+    height: calc(100vh - 110px) !important;  /* Full viewport minus top padding */
     background: #0f0f0f !important;
 }
 
@@ -281,31 +281,48 @@ body.neurocenter-body {
     overflow: hidden !important;
 }
 
-/* AGENTS PANEL - LEFT SIDE (40% width) */
+/* Module Headers - Fixed Height */
+.module-card .module-header {
+    background: linear-gradient(135deg, #1a1a1a, #222);
+    padding: 16px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    height: 60px;
+}
+
+/* Module Body - Fill Available Space */
+.module-card .module-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+/* AGENTS PANEL - LEFT SIDE (spans full height) */
 .module-card[data-module="agents"] {
     grid-column: 1 !important;
-    grid-row: 1 / span 2 !important;  /* Spans 2 rows */
-    min-height: 500px !important;
+    grid-row: 1 / span 2 !important;  /* Spans both rows */
+    height: 100% !important;  /* Fill full height */
     background: #1a1a1a !important;
     border: 1px solid #333 !important;
 }
 
-/* DLQ PANEL - TOP RIGHT (30% width, smaller height) */
+/* DLQ PANEL - TOP RIGHT (50% of right column height) */
 .module-card[data-module="dlqs"] {
-    grid-column: 2 / span 2 !important;  /* Spans columns 2-3 */
+    grid-column: 2 !important;
     grid-row: 1 !important;
-    min-height: 200px !important;
-    max-height: 250px !important;
+    height: 100% !important;  /* Fill full height of row */
     background: #1a1a1a !important;
     border: 1px solid #333 !important;
 }
 
-/* TIMELINE PANEL - BOTTOM RIGHT (below DLQ) */
+/* TIMELINE PANEL - BOTTOM RIGHT (50% of right column height) */
 .module-card[data-module="timeline"] {
-    grid-column: 2 / span 2 !important;  /* Spans columns 2-3 */
+    grid-column: 2 !important;
     grid-row: 2 !important;
-    min-height: 250px !important;
-    max-height: 300px !important;
+    height: 100% !important;  /* Fill full height of row */
     background: #1a1a1a !important;
     border: 1px solid #333 !important;
     display: flex !important;
@@ -313,12 +330,15 @@ body.neurocenter-body {
     opacity: 1 !important;
 }
 
-/* Agent Cards Container */
+/* Agent Cards Container - Flexible grid */
 .agent-cards-container {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 12px;
     padding: 16px;
+    height: calc(100% - 60px);  /* Full height minus header */
+    overflow-y: auto;
+    align-content: start;
 }
 
 /* Agent Card */
@@ -535,13 +555,13 @@ body.neurocenter-body {
     border-color: #F44336;
 }
 
-/* DLQ Cards - Smaller for active investigations */
+/* DLQ Cards - Flexible height for active investigations */
 .dlq-list {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
     padding: 12px;
-    max-height: 180px;  /* Smaller height */
+    height: calc(100% - 60px);  /* Full height minus header */
     overflow-y: auto;
 }
 
@@ -692,10 +712,10 @@ body.neurocenter-body {
     border: 1px solid #333 !important;
 }
 
-/* Timeline Container - Compact for right side placement */
+/* Timeline Container - Flexible height */
 .timeline-container {
     padding: 12px;
-    max-height: 220px;  /* Smaller to fit below DLQ panel */
+    height: calc(100% - 60px);  /* Full height minus header */
     overflow-y: auto;
 }
 

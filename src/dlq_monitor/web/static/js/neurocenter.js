@@ -70,10 +70,10 @@ function initializeNeuroCenter() {
     initializeAgentOverview();
     initializeMetrics();
     
-    // Simulate active investigations for testing
-    setTimeout(() => {
-        simulateActiveInvestigations();
-    }, 1000);
+    // Don't simulate - only show real active investigations
+    // setTimeout(() => {
+    //     simulateActiveInvestigations();
+    // }, 1000);
     initializeTimeline();
     
     // Initialize Glass Room features
@@ -316,7 +316,7 @@ function loadProductionQueues() {
         name.includes('dlq') || name.includes('DLQ') || name.includes('dead-letter')
     );
     
-    // Create initial cards for DLQ queues only
+    // Create initial cards for AWS SQS Monitor panel only
     dlqQueues.forEach(queueName => {
         const card = createQueueCard({
             name: queueName,
@@ -331,7 +331,7 @@ function loadProductionQueues() {
         container.appendChild(card);
     });
     
-    // Also populate the DLQ panel
+    // Update DLQ panel - will only show if agents are active
     updateDLQPanel();
     
     // Request real queue data from AWS
@@ -422,33 +422,41 @@ function createDLQCard(dlq) {
     return card;
 }
 
-// Update DLQ panel with cards - ONLY show actively investigated DLQs
+// Update DLQ panel with cards - ONLY show DLQs with active agents working on them
 function updateDLQPanel() {
     const dlqList = document.getElementById('dlq-list');
     if (!dlqList) return;
     
     dlqList.innerHTML = '';
     
-    // Only show DLQs that are being actively investigated
-    // Filter for DLQs with messages AND active investigations
-    const activeDLQs = Array.from(neuroState.dlqs.entries())
-        .filter(([name, data]) => {
-            // Check if DLQ has messages and is being investigated
-            const hasMessages = (data.messages || 0) > 0;
-            const isBeingInvestigated = neuroState.activeInvestigations.has(name) || 
-                                       Array.from(neuroState.agents.values()).some(agent => 
-                                           agent.queue === name && agent.status === 'active'
-                                       );
-            return hasMessages && (isBeingInvestigated || data.status === 'investigating');
-        })
-        .map(([name, data]) => ({
-            name: name,
-            messages: data.messages || 0,
-            status: data.status || 'unknown',
-            agent: data.agent || null,
-            age: data.age || 'Unknown'
-        }))
-        .sort((a, b) => b.messages - a.messages); // Sort by message count
+    // Only show DLQs that have active agents currently working on them
+    const activeDLQs = [];
+    
+    // Check each agent to find which DLQs they're working on
+    Array.from(neuroState.agents.values()).forEach(agent => {
+        if (agent.status === 'active' || agent.status === 'running') {
+            // Agent is actively working - check if they have an associated DLQ
+            const dlqName = agent.queue || agent.target || agent.dlq;
+            if (dlqName) {
+                // Get DLQ data
+                const dlqData = neuroState.dlqs.get(dlqName) || {};
+                
+                // Add to active DLQs if not already there
+                if (!activeDLQs.find(d => d.name === dlqName)) {
+                    activeDLQs.push({
+                        name: dlqName,
+                        messages: dlqData.messages || 0,
+                        status: 'investigating',
+                        agent: agent.name || 'Investigation Agent',
+                        age: dlqData.age || 'Unknown'
+                    });
+                }
+            }
+        }
+    });
+    
+    // Sort by message count (highest first)
+    activeDLQs.sort((a, b) => b.messages - a.messages);
     
     let critical = 0, warning = 0, ok = 0;
     
@@ -1146,12 +1154,12 @@ function handleQueueData(data) {
             // Update neuroState
             neuroState.dlqs.set(queue.name, queue);
             
-            // Create card
+            // Create card for AWS SQS Monitor panel
             const card = createQueueCard(queue);
             container.appendChild(card);
         });
         
-        // Update DLQ panel
+        // Update DLQ panel - will only show DLQs with active agents
         updateDLQPanel();
     }
 }
