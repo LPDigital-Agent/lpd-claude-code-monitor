@@ -2,6 +2,8 @@
 
 import { AlertTriangle, Activity, Clock, GitPullRequest } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 interface DLQItem {
   id: string
@@ -24,45 +26,56 @@ export function DeadLetterQueuesPanel() {
     setStats({ critical: 0, warning: 0, ok: 0 })
   }, [])
 
-  const getStatusColor = (status: string) => {
+  const getStatusTone = (status: string): 'critical' | 'warning' | 'success' | 'neutral' => {
     switch (status) {
-      case 'critical': return 'bg-red-500/20 border-red-500 text-red-400'
-      case 'warning': return 'bg-yellow-500/20 border-yellow-500 text-yellow-400'
-      case 'ok': return 'bg-green-500/20 border-green-500 text-green-400'
-      default: return 'bg-gray-500/20 border-gray-500 text-gray-400'
+      case 'critical': return 'critical'
+      case 'warning': return 'warning'
+      case 'ok': return 'success'
+      default: return 'neutral'
     }
   }
 
   return (
-    <div className="bg-gray-900/50 backdrop-blur-sm rounded-lg border border-gray-800 h-full flex flex-col">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-800 bg-gradient-to-r from-red-900/20 to-orange-900/20">
-        <div className="flex items-center justify-between">
+    <Card elevation="md" variant="glass" className="h-full flex flex-col bg-neutral-900/80">
+      <CardHeader
+        className="bg-gradient-to-r from-critical-900/20 to-brand-900/20 border-b border-neutral-800"
+        title={
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-400 animate-pulse" />
+            <AlertTriangle className="w-5 h-5 text-critical-400 animate-pulse" />
             <div>
-              <h3 className="text-white font-semibold">Dead Letter Queues</h3>
-              <p className="text-xs text-gray-400">Active Investigations Only</p>
+              <h3 className="text-neutral-0 font-heading font-semibold">Dead Letter Queues</h3>
+              <p className="text-xs text-neutral-400">Active Investigations Only</p>
             </div>
           </div>
+        }
+        aside={
           <div className="flex gap-2">
-            <span className={`px-2 py-1 rounded-md text-xs font-medium ${stats.critical > 0 ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-gray-700/50 text-gray-500'}`}>
+            <Badge 
+              tone={stats.critical > 0 ? 'critical' : 'neutral'}
+              pulse={stats.critical > 0}
+              size="sm"
+            >
               {stats.critical}
-            </span>
-            <span className={`px-2 py-1 rounded-md text-xs font-medium ${stats.warning > 0 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-gray-700/50 text-gray-500'}`}>
+            </Badge>
+            <Badge 
+              tone={stats.warning > 0 ? 'warning' : 'neutral'}
+              size="sm"
+            >
               {stats.warning}
-            </span>
-            <span className={`px-2 py-1 rounded-md text-xs font-medium ${stats.ok > 0 ? 'bg-green-500/20 text-green-400' : 'bg-gray-700/50 text-gray-500'}`}>
+            </Badge>
+            <Badge 
+              tone={stats.ok > 0 ? 'success' : 'neutral'}
+              size="sm"
+            >
               {stats.ok}
-            </span>
+            </Badge>
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <CardContent className="flex-1 overflow-y-auto">
         {dlqs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+          <div className="flex flex-col items-center justify-center h-full text-neutral-500">
             <AlertTriangle className="w-12 h-12 mb-3 opacity-30" />
             <p className="text-sm font-medium">No Active Investigations</p>
             <p className="text-xs mt-1">DLQs with active agents will appear here</p>
@@ -70,33 +83,34 @@ export function DeadLetterQueuesPanel() {
         ) : (
           <div className="space-y-3">
             {dlqs.map((dlq) => (
-              <div
+              <Card
                 key={dlq.id}
-                className={`p-3 rounded-lg border transition-all duration-200 hover:scale-[1.02] ${getStatusColor(dlq.status)}`}
+                elevation="sm"
+                className="p-3 transition-all duration-200 hover:scale-[1.02]"
               >
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h4 className="font-medium text-white">{dlq.name}</h4>
-                    <p className="text-xs opacity-75 mt-1">
+                    <h4 className="font-medium text-neutral-0">{dlq.name}</h4>
+                    <p className="text-xs text-neutral-400 mt-1">
                       {dlq.messages} messages
                     </p>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(dlq.status)}`}>
+                  <Badge tone={getStatusTone(dlq.status)} size="sm">
                     {dlq.status.toUpperCase()}
-                  </span>
+                  </Badge>
                 </div>
                 
                 {dlq.agent && (
-                  <div className="mt-3 pt-3 border-t border-white/10">
+                  <div className="mt-3 pt-3 border-t border-neutral-800/50">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">Agent: {dlq.agent}</span>
-                      <span className="text-gray-400">{dlq.startTime}</span>
+                      <span className="text-neutral-400">Agent: {dlq.agent}</span>
+                      <span className="text-neutral-400">{dlq.startTime}</span>
                     </div>
                     {dlq.progress !== undefined && (
                       <div className="mt-2">
-                        <div className="w-full bg-gray-700 rounded-full h-1.5">
+                        <div className="w-full bg-neutral-700 rounded-full h-1.5">
                           <div
-                            className="bg-primary-500 h-1.5 rounded-full transition-all duration-500"
+                            className="bg-brand-600 h-1.5 rounded-full transition-all duration-500"
                             style={{ width: `${dlq.progress}%` }}
                           />
                         </div>
@@ -104,11 +118,11 @@ export function DeadLetterQueuesPanel() {
                     )}
                   </div>
                 )}
-              </div>
+              </Card>
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }

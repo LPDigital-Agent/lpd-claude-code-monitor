@@ -1,1 +1,0 @@
-"""Mock objects for DLQ Monitor tests."""

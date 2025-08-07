@@ -16,21 +16,23 @@ interface Queue {
 }
 
 async function fetchQueues(): Promise<Queue[]> {
-  const response = await fetch('/api/flask/get_production_queues')
+  const response = await fetch('/api/flask/api/dlqs')
   if (!response.ok) throw new Error('Failed to fetch queues')
   const data = await response.json()
   
-  // Filter for DLQ queues only and sort by message count
-  return data.queues
-    .filter((q: any) => q.name.toLowerCase().includes('dlq'))
-    .sort((a: any, b: any) => b.attributes.ApproximateNumberOfMessages - a.attributes.ApproximateNumberOfMessages)
+  // The API returns an array directly
+  const queues = Array.isArray(data) ? data : (data.dlqs || [])
+  
+  return queues
+    .filter((q: any) => q.isDLQ !== false) // Only show DLQs
+    .sort((a: any, b: any) => b.messages - a.messages)
     .map((q: any) => ({
-      id: q.url,
+      id: q.url || q.name,
       name: q.name,
-      url: q.url,
-      messages: parseInt(q.attributes.ApproximateNumberOfMessages || '0'),
-      inFlight: parseInt(q.attributes.ApproximateNumberOfMessagesNotVisible || '0'),
-      region: 'sa-east-1',
+      url: q.url || q.name,
+      messages: q.messages || 0,
+      inFlight: q.messagesNotVisible || 0,
+      region: q.region || 'sa-east-1',
       isDLQ: true,
       selected: false
     }))

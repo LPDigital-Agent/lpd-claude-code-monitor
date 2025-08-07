@@ -48,11 +48,8 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 24 100% 50%;
   }
-}
-
-@layer base {
+  
   body {
-    @apply bg-background text-foreground;
     font-family: 'Poppins', system-ui, sans-serif;
   }
 }
@@ -63,22 +60,24 @@
   }
   
   .glass-effect {
-    @apply backdrop-blur-sm bg-white/10 border border-white/20;
+    @apply backdrop-blur-sm border;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
   }
   
   .gradient-primary {
-    @apply bg-gradient-to-r from-primary-500 to-primary-600;
+    background: linear-gradient(to right, #FF6B00, #CC5500);
   }
   
   .gradient-success {
-    @apply bg-gradient-to-r from-green-500 to-emerald-600;
+    background: linear-gradient(to right, #10B981, #059669);
   }
   
   .gradient-warning {
-    @apply bg-gradient-to-r from-yellow-500 to-orange-600;
+    background: linear-gradient(to right, #F59E0B, #D97706);
   }
   
   .gradient-danger {
-    @apply bg-gradient-to-r from-red-500 to-rose-600;
+    background: linear-gradient(to right, #EF4444, #DC2626);
   }
 }

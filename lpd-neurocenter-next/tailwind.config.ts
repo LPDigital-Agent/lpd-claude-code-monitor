@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import tokens from './src/lib/tokens'
 
 const config: Config = {
   darkMode: ["class"],
@@ -17,6 +18,16 @@ const config: Config = {
     },
     extend: {
       colors: {
+        // Design System Token Mappings
+        brand: tokens.color.brand,
+        wine: tokens.color.wine,
+        neutral: tokens.color.neutral,
+        success: tokens.color.success,
+        warning: tokens.color.warning,
+        critical: tokens.color.critical,
+        info: tokens.color.info,
+        
+        // Legacy/Compatibility mappings
         primary: {
           DEFAULT: '#FF6B00',
           50: '#FFF5E6',
@@ -85,14 +96,22 @@ const config: Config = {
           foreground: "hsl(var(--card-foreground))",
         },
       },
-      fontFamily: {
-        sans: ['Poppins', 'system-ui', 'sans-serif'],
-      },
+      spacing: tokens.space,
       borderRadius: {
+        ...tokens.radius,
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        display: [tokens.typography.display.fontFamily],
+        text: [tokens.typography.text.fontFamily],
+        heading: [tokens.typography.heading.fontFamily],
+        mono: [tokens.typography.mono.fontFamily],
+        sans: ['Poppins', 'system-ui', 'sans-serif'],
+      },
+      boxShadow: tokens.shadow,
+      blur: tokens.blur,
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -116,3 +135,5 @@ const config: Config = {
   },
   plugins: [require("tailwindcss-animate")],
 }
+
+export default config
