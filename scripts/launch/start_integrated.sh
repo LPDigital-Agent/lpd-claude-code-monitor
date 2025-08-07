@@ -110,7 +110,7 @@ show_status() {
     print_color "$CYAN" "\n📊 Service Status:"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
-    local services=("neurocenter" "web_dashboard" "dlq_monitor" "adk_monitor")
+    local services=("neurocenter_backend" "neurocenter_next" "web_dashboard" "dlq_monitor" "adk_monitor")
     for service in "${services[@]}"; do
         local pid_file="${PID_DIR}/${service}.pid"
         if [ -f "$pid_file" ]; then
@@ -133,7 +133,8 @@ stop_all() {
     stop_service "adk_monitor"
     stop_service "dlq_monitor"
     stop_service "web_dashboard"
-    stop_service "neurocenter"
+    stop_service "neurocenter_next"
+    stop_service "neurocenter_backend"
     print_color "$GREEN" "✓ All services stopped\n"
 }
 
@@ -158,25 +159,32 @@ start_all() {
     print_color "$CYAN" "\n📦 Checking dependencies..."
     pip install -q SQLAlchemy flask-sqlalchemy google-adk google-generativeai 2>/dev/null
     
-    # 1. Start NeuroCenter (Port 5002)
-    print_color "$ORANGE" "\n🧠 NeuroCenter Service"
-    start_service "neurocenter" \
+    # 1. Start NeuroCenter Backend (Port 5002)
+    print_color "$ORANGE" "\n🧠 NeuroCenter Backend Service"
+    start_service "neurocenter_backend" \
         "FLASK_PORT=5002 python -W ignore src/dlq_monitor/web/app.py" \
         "5002"
     
-    # 2. Start Web Dashboard (Port 5001)
+    # 2. Start NeuroCenter Next.js Frontend (Port 3001)
+    print_color "$ORANGE" "\n⚛️  NeuroCenter Next.js Frontend"
+    cd lpd-neurocenter-next && npm install --silent 2>/dev/null && cd ..
+    start_service "neurocenter_next" \
+        "cd lpd-neurocenter-next && npm run dev" \
+        "3001"
+    
+    # 3. Start Web Dashboard (Port 5001)
     print_color "$BLUE" "\n📊 Web Dashboard Service"
     start_service "web_dashboard" \
         "FLASK_PORT=5001 python -W ignore src/dlq_monitor/web/app.py" \
         "5001"
     
-    # 3. Start DLQ Monitor
+    # 4. Start DLQ Monitor
     print_color "$GREEN" "\n🔍 DLQ Monitor Service"
     start_service "dlq_monitor" \
         "python -W ignore src/dlq_monitor/core/monitor.py" \
         ""
     
-    # 4. Start ADK Production Monitor (always start for production)
+    # 5. Start ADK Production Monitor (always start for production)
     print_color "$MAGENTA" "\n🤖 ADK Multi-Agent Production Monitor"
     start_service "adk_monitor" \
         "python -W ignore scripts/monitoring/adk_production_monitor.py" \
@@ -188,9 +196,10 @@ start_all() {
     # Display access URLs
     print_color "$CYAN" "🌐 Access URLs:"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    print_color "$ORANGE" "  🧠 NeuroCenter:    http://localhost:5002/neurocenter"
-    print_color "$BLUE" "  📊 Web Dashboard:  http://localhost:5001/"
-    print_color "$GREEN" "  📝 Logs:           ${LOG_DIR}/"
+    print_color "$ORANGE" "  ⚛️  NeuroCenter Next.js:  http://localhost:3001/"
+    print_color "$ORANGE" "  🧠 NeuroCenter Flask:     http://localhost:5002/neurocenter"
+    print_color "$BLUE" "  📊 Web Dashboard:         http://localhost:5001/"
+    print_color "$GREEN" "  📝 Logs:                  ${LOG_DIR}/"
     echo ""
     
     # Show control commands
