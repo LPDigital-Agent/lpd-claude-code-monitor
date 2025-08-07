@@ -1,0 +1,221 @@
+/* Enhanced Queue Monitor Styles */
+
+/* Queue Table Styles */
+.queue-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.queue-table thead {
+    background: rgba(250, 70, 22, 0.05);
+    border-bottom: 2px solid var(--primary-orange);
+}
+
+.queue-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+}
+
+.queue-table tbody tr {
+    border-bottom: 1px solid var(--border-primary);
+    transition: all 0.2s ease;
+}
+
+.queue-table tbody tr:hover {
+    background: var(--bg-hover);
+}
+
+.queue-table td {
+    padding: 12px;
+    color: var(--text-primary);
+}
+
+/* Queue Filters */
+.queue-filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+}
+
+.queue-search {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.queue-search:focus {
+    outline: none;
+    border-color: var(--primary-orange);
+}
+
+/* Queue Name with Badge */
+.queue-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.badge-dlq {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--primary-orange);
+    color: white;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.status-ok {
+    background: rgba(0, 210, 106, 0.1);
+    color: var(--status-success);
+    border: 1px solid rgba(0, 210, 106, 0.3);
+}
+
+.status-badge.status-alert {
+    background: rgba(255, 161, 22, 0.1);
+    color: var(--status-warning);
+    border: 1px solid rgba(255, 161, 22, 0.3);
+}
+
+.status-badge.status-warning {
+    background: rgba(255, 161, 22, 0.2);
+    color: var(--status-warning);
+    border: 1px solid var(--status-warning);
+}
+
+.status-badge.status-critical {
+    background: rgba(255, 85, 85, 0.2);
+    color: var(--status-error);
+    border: 1px solid var(--status-error);
+}
+
+/* Action Buttons */
+.btn-action {
+    background: transparent;
+    border: 1px solid var(--border-primary);
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 4px;
+}
+
+.btn-action:hover:not(:disabled) {
+    background: var(--primary-orange);
+    border-color: var(--primary-orange);
+    color: white;
+}
+
+.btn-action:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.btn-action i {
+    width: 16px;
+    height: 16px;
+}
+
+/* Checkbox Styles */
+.queue-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-orange);
+}
+
+/* Account Info */
+.account-info {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+/* Text Alignment */
+.text-right {
+    text-align: right;
+}
+
+.text-warning {
+    color: var(--status-warning) !important;
+    font-weight: 600;
+}
+
+/* Module Wide Style */
+.module-card[data-module="dlq-monitor"] {
+    grid-column: span 6;
+}
+
+/* Filter Select */
+.filter-select {
+    padding: 8px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-orange);
+}
+
+/* Module Action Buttons */
+.btn-module-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--border-primary);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-module-action:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-secondary);
+    color: var(--text-primary);
+}
+
+.btn-module-action.btn-primary {
+    background: var(--primary-orange);
+    border-color: var(--primary-orange);
+    color: white;
+}
+
+.btn-module-action.btn-primary:hover {
+    background: var(--primary-orange-dark);
+    border-color: var(--primary-orange-dark);
+}

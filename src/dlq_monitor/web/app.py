@@ -66,34 +66,94 @@ class MCPService:
         self.sqs_client = session.client('sqs', region_name=self.aws_region)
         self.cloudwatch_client = session.client('logs', region_name=self.aws_region)
     
-    def get_dlq_queues(self) -> List[Dict[str, Any]]:
-        """Get all DLQ queues with message counts"""
+    def get_all_queues(self) -> List[Dict[str, Any]]:
+        """Get all SQS queues with their attributes"""
         try:
             response = self.sqs_client.list_queues()
             queues = []
             
             if 'QueueUrls' in response:
                 for queue_url in response['QueueUrls']:
-                    if 'dlq' in queue_url.lower():
-                        queue_name = queue_url.split('/')[-1]
-                        
-                        attrs = self.sqs_client.get_queue_attributes(
-                            QueueUrl=queue_url,
-                            AttributeNames=['All']
-                        )['Attributes']
-                        
-                        queues.append({
-                            'name': queue_name,
-                            'url': queue_url,
-                            'messages': int(attrs.get('ApproximateNumberOfMessages', 0)),
-                            'messagesNotVisible': int(attrs.get('ApproximateNumberOfMessagesNotVisible', 0)),
-                            'messagesDelayed': int(attrs.get('ApproximateNumberOfMessagesDelayed', 0)),
-                            'createdTimestamp': attrs.get('CreatedTimestamp', ''),
-                            'lastModifiedTimestamp': attrs.get('LastModifiedTimestamp', ''),
-                            'status': 'alert' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 0 else 'ok'
-                        })
+                    queue_name = queue_url.split('/')[-1]
+                    
+                    # Get queue attributes
+                    attrs = self.sqs_client.get_queue_attributes(
+                        QueueUrl=queue_url,
+                        AttributeNames=['All']
+                    )['Attributes']
+                    
+                    queues.append({
+                        'name': queue_name,
+                        'url': queue_url,
+                        'messages': int(attrs.get('ApproximateNumberOfMessages', 0)),
+                        'inFlight': int(attrs.get('ApproximateNumberOfMessagesNotVisible', 0)),
+                        'delayed': int(attrs.get('ApproximateNumberOfMessagesDelayed', 0)),
+                        'visibility': attrs.get('VisibilityTimeout', '30') + 's',
+                        'retention': str(int(attrs.get('MessageRetentionPeriod', 345600)) // 86400) + 'd',
+                        'type': 'DLQ' if 'dlq' in queue_name.lower() else 'Standard'
+                    })
             
-            return sorted(queues, key=lambda x: x['messages'], reverse=True)
+            return queues
+        except Exception as e:
+            logger.error(f"Error getting all queues: {e}")
+            return []
+    
+    def get_dlq_queues(self) -> List[Dict[str, Any]]:
+        """Get ALL queues with detailed information"""
+        try:
+            response = self.sqs_client.list_queues()
+            queues = []
+            
+            if 'QueueUrls' in response:
+                for queue_url in response['QueueUrls']:
+                    queue_name = queue_url.split('/')[-1]
+                    
+                    # Get detailed attributes for each queue
+                    attrs = self.sqs_client.get_queue_attributes(
+                        QueueUrl=queue_url,
+                        AttributeNames=['All']
+                    )['Attributes']
+                    
+                    # Determine if this is a DLQ based on name or redrive policy
+                    is_dlq = 'dlq' in queue_name.lower() or 'dead' in queue_name.lower()
+                    
+                    # Get redrive policy if it exists (shows if queue has a DLQ)
+                    redrive_policy = attrs.get('RedrivePolicy', '{}')
+                    has_dlq_config = 'deadLetterTargetArn' in redrive_policy
+                    
+                    # Calculate age of oldest message if any
+                    oldest_message_age = None
+                    if int(attrs.get('ApproximateNumberOfMessages', 0)) > 0:
+                        # This is approximate based on queue creation time
+                        created = int(attrs.get('CreatedTimestamp', 0))
+                        oldest_message_age = int(time.time()) - created
+                    
+                    queue_data = {
+                        'name': queue_name,
+                        'url': queue_url,
+                        'arn': attrs.get('QueueArn', ''),
+                        'messages': int(attrs.get('ApproximateNumberOfMessages', 0)),
+                        'messagesNotVisible': int(attrs.get('ApproximateNumberOfMessagesNotVisible', 0)),
+                        'messagesDelayed': int(attrs.get('ApproximateNumberOfMessagesDelayed', 0)),
+                        'createdTimestamp': attrs.get('CreatedTimestamp', ''),
+                        'lastModifiedTimestamp': attrs.get('LastModifiedTimestamp', ''),
+                        'visibilityTimeout': int(attrs.get('VisibilityTimeout', 30)),
+                        'maximumMessageSize': int(attrs.get('MaximumMessageSize', 262144)),
+                        'messageRetentionPeriod': int(attrs.get('MessageRetentionPeriod', 345600)),
+                        'receiveMessageWaitTime': int(attrs.get('ReceiveMessageWaitTimeSeconds', 0)),
+                        'isDLQ': is_dlq,
+                        'hasDLQConfig': has_dlq_config,
+                        'oldestMessageAge': oldest_message_age,
+                        'status': 'critical' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 100 else 
+                                 'warning' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 10 else 
+                                 'alert' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 0 else 'ok',
+                        'accountId': '432817839790',
+                        'region': self.aws_region
+                    }
+                    
+                    queues.append(queue_data)
+            
+            return sorted(queues, key=lambda x: (not x['isDLQ'], -x['messages']))
         except Exception as e:
             logger.error(f"Error fetching DLQ queues: {e}")
             return []
@@ -241,6 +301,13 @@ def neurocenter():
     if not neurocenter_enabled:
         return "NeuroCenter services not available", 503
     return render_template('neurocenter.html')
+
+@app.route('/neurocenter-modern')
+def neurocenter_modern():
+    """Serve the ultra-modern professional NeuroCenter dashboard"""
+    if not neurocenter_enabled:
+        return "NeuroCenter services not available", 503
+    return render_template('neurocenter-modern.html')
 
 @app.route('/api/dashboard/summary')
 def dashboard_summary():
@@ -450,17 +517,27 @@ def neurocenter_background_updates():
     while not stop_thread:
         try:
             with app.app_context():
-                # Send DLQ updates
+                # Send DLQ updates with enhanced data
                 dlqs = mcp_service.get_dlq_queues()
                 for dlq in dlqs:
                     socketio.emit('dlq_update', {
                         'name': dlq['name'],
                         'messages': dlq['messages'],
+                        'messagesNotVisible': dlq.get('messagesNotVisible', 0),
+                        'messagesDelayed': dlq.get('messagesDelayed', 0),
                         'profile': 'FABIO-PROD',
-                        'region': 'sa-east-1',
+                        'region': dlq['region'],
+                        'accountId': dlq['accountId'],
                         'url': dlq.get('url', ''),
-                        'critical': dlq['messages'] >= 10,
-                        'status': dlq.get('status', 'ok')
+                        'arn': dlq.get('arn', ''),
+                        'isDLQ': dlq.get('isDLQ', False),
+                        'hasDLQConfig': dlq.get('hasDLQConfig', False),
+                        'critical': dlq['messages'] >= 100,
+                        'warning': dlq['messages'] >= 10,
+                        'status': dlq.get('status', 'ok'),
+                        'visibilityTimeout': dlq.get('visibilityTimeout', 30),
+                        'messageRetentionPeriod': dlq.get('messageRetentionPeriod', 345600),
+                        'oldestMessageAge': dlq.get('oldestMessageAge')
                     })
                 
                 # Send metrics update
@@ -592,6 +669,33 @@ def handle_get_dlqs():
             'critical': dlq['messages'] >= 10,
             'status': dlq.get('status', 'ok')
         })
+
+@socketio.on('get_queues')
+def handle_get_queues():
+    """Get all SQS queues including DLQs"""
+    try:
+        # Get all queues from AWS
+        queues = mcp_service.get_all_queues()
+        
+        # Send queue data
+        emit('queue_data', {
+            'queues': [
+                {
+                    'name': queue['name'],
+                    'type': 'DLQ' if 'dlq' in queue['name'].lower() else 'Standard',
+                    'messages': queue.get('messages', 0),
+                    'inFlight': queue.get('inFlight', 0),
+                    'delayed': queue.get('delayed', 0),
+                    'visibility': queue.get('visibility', '30s'),
+                    'retention': queue.get('retention', '14d'),
+                    'status': 'critical' if queue.get('messages', 0) > 100 else 'warning' if queue.get('messages', 0) > 50 else 'ok'
+                }
+                for queue in queues
+            ]
+        })
+    except Exception as e:
+        logger.error(f"Error fetching queues: {e}")
+        emit('error', {'message': 'Failed to fetch queues'})
 
 @socketio.on('get_metrics')
 def handle_get_metrics():

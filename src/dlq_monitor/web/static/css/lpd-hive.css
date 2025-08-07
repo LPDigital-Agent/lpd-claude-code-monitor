@@ -1,18 +1,26 @@
 /* LPD Digital Hive - Dashboard CSS */
-/* Brand Colors: Orange (#FF5722) with dark professional theme */
+/* Official LPD Hive Brand Colors from Brand Manual */
 
 :root {
-    --lpd-orange: #FF5722;
-    --lpd-orange-light: #FF7043;
-    --lpd-orange-dark: #E64A19;
-    --lpd-orange-accent: #FF6E40;
+    /* Primary Brand Colors */
+    --lpd-orange: #FA4616;        /* Creative Impulse - Pantone 172C */
+    --lpd-wine: #551C25;          /* Strategy - Pantone 4102C */
+    --lpd-black: #25282A;         /* Structure - Pantone 426C */
+    --lpd-offwhite: #E7E7E0;      /* Clarity - Pantone 9100C */
     
-    --bg-primary: #0a0a0a;
-    --bg-secondary: #1a1a1a;
-    --bg-panel: #141414;
-    --bg-card: #1e1e1e;
+    /* Legacy orange variations for smooth transition */
+    --lpd-orange-light: #FB6838;  /* Lighter shade of brand orange */
+    --lpd-orange-dark: #D83A10;   /* Darker shade of brand orange */
+    --lpd-orange-accent: #FA5627; /* Accent variation */
     
-    --text-primary: #ffffff;
+    /* Background colors using brand palette */
+    --bg-primary: #0a0a0a;        /* Near black for deep contrast */
+    --bg-secondary: #1a1a1a;      /* Slightly lighter than primary */
+    --bg-panel: #141414;          /* Panel background */
+    --bg-card: var(--lpd-black);  /* Using brand black for cards */
+    
+    /* Text colors */
+    --text-primary: var(--lpd-offwhite);  /* Using brand off-white */
     --text-secondary: #b0b0b0;
     --text-muted: #707070;
     
@@ -32,9 +40,15 @@
 body {
     background: var(--bg-primary);
     color: var(--text-primary);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     height: 100vh;
     overflow: hidden;
+}
+
+/* Typography - Brand Fonts */
+h1, h2, h3, h4, h5, h6, .navbar-brand, .brand-text {
+    font-family: 'Glancyr Neue', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 600;
 }
 
 /* Navigation Bar */

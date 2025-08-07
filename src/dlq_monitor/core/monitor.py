@@ -61,7 +61,7 @@ class MacNotifier:
         """Initialize with ElevenLabs TTS if available"""
         self.tts = None
         try:
-            from pr_notifier.pr_audio_monitor import ElevenLabsTTS
+            from dlq_monitor.notifiers.pr_audio import ElevenLabsTTS
             self.tts = ElevenLabsTTS()
         except ImportError:
             pass  # Will use macOS say as fallback
@@ -138,7 +138,7 @@ class AudioNotifier:
         """Initialize audio notifier with ElevenLabs if available"""
         self.tts = None
         try:
-            from pr_notifier.pr_audio_monitor import ElevenLabsTTS
+            from dlq_monitor.notifiers.pr_audio import ElevenLabsTTS
             self.tts = ElevenLabsTTS()
             logging.info("ElevenLabs TTS initialized with custom voice")
         except ImportError:
