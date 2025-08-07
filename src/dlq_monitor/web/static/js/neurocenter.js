@@ -125,11 +125,62 @@ function initializeWebSocket() {
 
 // Request initial data from server
 function requestInitialData() {
+    // Clear all panels first
+    clearAllPanels();
+    
     neuroState.socket.emit('get_agents');
     neuroState.socket.emit('get_investigations');
     neuroState.socket.emit('get_dlqs');
     neuroState.socket.emit('get_metrics');
     neuroState.socket.emit('get_queues');
+}
+
+// Clear all panels to empty state
+function clearAllPanels() {
+    // Clear Dead Letter Queues panel
+    const dlqList = document.getElementById('dlq-list');
+    if (dlqList) {
+        dlqList.innerHTML = `
+            <div class="dlq-empty-state">
+                <i data-lucide="inbox" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                <p style="opacity: 0.6; margin-top: 10px;">No active investigations</p>
+            </div>
+        `;
+    }
+    
+    // Clear Investigation Timeline
+    const timeline = document.getElementById('investigation-timeline');
+    if (timeline) {
+        timeline.innerHTML = `
+            <div class="timeline-empty-state" style="text-align: center; padding: 40px; color: #666;">
+                <i data-lucide="activity" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                <p style="opacity: 0.6; margin-top: 10px;">No investigations yet</p>
+            </div>
+        `;
+    }
+    
+    // Clear agents container
+    const agentsContainer = document.getElementById('agents-container');
+    if (agentsContainer) {
+        agentsContainer.innerHTML = `
+            <div class="agents-empty-state" style="text-align: center; padding: 40px; color: #666;">
+                <i data-lucide="users" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                <p style="opacity: 0.6; margin-top: 10px;">No active agents</p>
+            </div>
+        `;
+    }
+    
+    // Update badges to 0
+    const badges = ['dlq-critical', 'dlq-warning', 'dlq-ok'];
+    badges.forEach(id => {
+        const elem = document.getElementById(id);
+        if (elem) elem.textContent = 0;
+    });
+    
+    // Re-create lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 }
 
 // Initialize top bar controls
@@ -309,27 +360,8 @@ function loadProductionQueues() {
         return;
     }
     
-    container.innerHTML = '';
-    
-    // Filter only DLQ queues
-    const dlqQueues = PRODUCTION_QUEUES.filter(name => 
-        name.includes('dlq') || name.includes('DLQ') || name.includes('dead-letter')
-    );
-    
-    // Create initial cards for AWS SQS Monitor panel only
-    dlqQueues.forEach(queueName => {
-        const card = createQueueCard({
-            name: queueName,
-            type: 'DLQ',
-            messages: 0,
-            inFlight: 0,
-            delayed: 0,
-            visibility: '30s',
-            retention: '14d',
-            status: 'ok'
-        });
-        container.appendChild(card);
-    });
+    // Clear container and don't pre-populate with any queues
+    container.innerHTML = '<div class="loading-placeholder" style="text-align: center; padding: 40px; color: #666;">Waiting for AWS queue data...</div>';
     
     // Update DLQ panel - will only show if agents are active
     updateDLQPanel();
@@ -1136,7 +1168,7 @@ function handleQueueData(data) {
         const container = document.getElementById('queue-cards');
         if (!container) return;
         
-        // Filter only DLQ queues
+        // Filter only DLQ queues for AWS SQS Monitor panel
         const dlqQueues = data.queues.filter(queue => 
             queue.name.includes('dlq') || queue.name.includes('DLQ') || queue.name.includes('dead-letter')
         );
@@ -1144,22 +1176,26 @@ function handleQueueData(data) {
         // Sort by message count (highest first)
         dlqQueues.sort((a, b) => (b.messages || 0) - (a.messages || 0));
         
-        // Update DLQ panel with active investigations
-        updateDLQPanel();
-        
-        // Clear and rebuild container with sorted DLQs
+        // Clear and rebuild AWS SQS Monitor panel with sorted DLQs
         container.innerHTML = '';
         
-        dlqQueues.forEach(queue => {
-            // Update neuroState
-            neuroState.dlqs.set(queue.name, queue);
-            
-            // Create card for AWS SQS Monitor panel
-            const card = createQueueCard(queue);
-            container.appendChild(card);
-        });
+        if (dlqQueues.length === 0) {
+            container.innerHTML = '<div class=\"no-queues\" style=\"text-align: center; padding: 40px; color: #666;\">No DLQ queues found</div>';
+        } else {
+            dlqQueues.forEach(queue => {
+                // Update neuroState with queue data
+                neuroState.dlqs.set(queue.name, {
+                    ...queue,
+                    age: queue.age || 'Unknown'
+                });
+                
+                // Create card for AWS SQS Monitor panel
+                const card = createQueueCard(queue);
+                container.appendChild(card);
+            });
+        }
         
-        // Update DLQ panel - will only show DLQs with active agents
+        // Update Dead Letter Queues panel - will ONLY show DLQs with active agents
         updateDLQPanel();
     }
 }
@@ -1505,26 +1541,18 @@ function startAutoRefresh() {
 
 // Load initial data
 function loadInitialData() {
-    // Initialize with demo data for immediate visual feedback
-    setTimeout(() => {
-        addActivityFeedItem('System', 'Connected to AWS SQS monitoring service');
-        addActivityFeedItem('Investigation Agent', 'Ready to investigate DLQ messages');
-        addActivityFeedItem('DLQ Analyzer', 'Monitoring production queues for anomalies');
-        
-        addRecentAction({
-            type: 'info',
-            title: 'System initialized',
-            event_title: 'NeuroCenter operational'
-        });
-        
-        // Update initial metrics
-        neuroState.metrics = {
-            activeAgents: 4,
-            avgTime: 3.2,
-            prsGenerated: 12,
-            successRate: 94
-        };
-        updateMetricsDisplay();
+    // Don't add any demo data - wait for real data
+    // Clear all panels to ensure empty state
+    clearAllPanels();
+    
+    // Initialize metrics to 0
+    neuroState.metrics = {
+        activeAgents: 0,
+        avgTime: 0,
+        prsGenerated: 0,
+        successRate: 0
+    };
+    updateMetricsDisplay();
         
         // Update DLQ badges
         document.getElementById('dlq-critical').textContent = '0';
