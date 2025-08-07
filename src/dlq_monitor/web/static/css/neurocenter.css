@@ -257,12 +257,12 @@ body.neurocenter-body {
     padding: 0 4px;
 }
 
-/* Main Container - FORCE SIMPLE 2-COLUMN LAYOUT */
+/* Main Container - Custom Layout for NeuroCenter */
 .neurocenter-container {
     display: grid !important;
-    grid-template-columns: 50% 50% !important;  /* EXACTLY HALF EACH */
-    grid-auto-rows: minmax(500px, auto) !important;  /* AUTO ROWS */
-    gap: 20px !important;
+    grid-template-columns: 40% 30% 30% !important;  /* 3 columns: agents, dlqs, timeline */
+    grid-auto-rows: auto !important;
+    gap: 16px !important;
     padding: 110px 20px 20px !important;
     width: 100% !important;
     min-height: 100vh !important;
@@ -281,22 +281,36 @@ body.neurocenter-body {
     overflow: hidden !important;
 }
 
-/* DLQ PANEL - LEFT SIDE */
-.module-card[data-module="dlqs"] {
+/* AGENTS PANEL - LEFT SIDE (40% width) */
+.module-card[data-module="agents"] {
     grid-column: 1 !important;
-    grid-row: 1 !important;
+    grid-row: 1 / span 2 !important;  /* Spans 2 rows */
     min-height: 500px !important;
     background: #1a1a1a !important;
     border: 1px solid #333 !important;
 }
 
-/* AGENTS PANEL - RIGHT SIDE */
-.module-card[data-module="agents"] {
-    grid-column: 2 !important;
+/* DLQ PANEL - TOP RIGHT (30% width, smaller height) */
+.module-card[data-module="dlqs"] {
+    grid-column: 2 / span 2 !important;  /* Spans columns 2-3 */
     grid-row: 1 !important;
-    min-height: 500px !important;
+    min-height: 200px !important;
+    max-height: 250px !important;
     background: #1a1a1a !important;
     border: 1px solid #333 !important;
+}
+
+/* TIMELINE PANEL - BOTTOM RIGHT (below DLQ) */
+.module-card[data-module="timeline"] {
+    grid-column: 2 / span 2 !important;  /* Spans columns 2-3 */
+    grid-row: 2 !important;
+    min-height: 250px !important;
+    max-height: 300px !important;
+    background: #1a1a1a !important;
+    border: 1px solid #333 !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 /* Agent Cards Container */
@@ -390,10 +404,10 @@ body.neurocenter-body {
     color: #ccc;
 }
 
-/* AWS SQS MONITOR - FULL WIDTH SECOND ROW */
+/* AWS SQS MONITOR - FULL WIDTH THIRD ROW */
 .module-card[data-module="dlq-monitor"] {
-    grid-column: 1 / span 2 !important;
-    grid-row: 2 !important;
+    grid-column: 1 / span 3 !important;
+    grid-row: 3 !important;
     min-height: 400px !important;
     background: #1a1a1a !important;
     border: 1px solid #333 !important;
@@ -521,48 +535,66 @@ body.neurocenter-body {
     border-color: #F44336;
 }
 
-/* DLQ Cards */
+/* DLQ Cards - Smaller for active investigations */
 .dlq-list {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 16px;
-    max-height: 420px;
+    gap: 8px;
+    padding: 12px;
+    max-height: 180px;  /* Smaller height */
     overflow-y: auto;
 }
 
 .dlq-card {
     background: #222;
     border: 1px solid #333;
-    border-radius: 8px;
-    padding: 12px;
+    border-radius: 6px;
+    padding: 8px 10px;  /* Smaller padding */
     transition: all 0.3s ease;
+}
+
+.dlq-card.active-investigation {
+    border-color: #FA4616;
+    box-shadow: 0 2px 8px rgba(250, 70, 22, 0.2);
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0%, 100% { border-color: #FA4616; }
+    50% { border-color: rgba(250, 70, 22, 0.5); }
 }
 
 .dlq-card:hover {
     border-color: #FA4616;
     background: #252525;
+    transform: translateY(-1px);
 }
 
 .dlq-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .dlq-card-header h5 {
     color: #fff;
-    font-size: 14px;
+    font-size: 12px;  /* Smaller font */
     margin: 0;
     text-transform: capitalize;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 70%;
 }
 
 .dlq-badge {
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 14px;
+    padding: 2px 8px;  /* Smaller padding */
+    border-radius: 10px;
+    font-size: 11px;  /* Smaller font */
     font-weight: 600;
+    min-width: 30px;
+    text-align: center;
 }
 
 .dlq-badge.ok {
@@ -582,53 +614,88 @@ body.neurocenter-body {
 
 .dlq-card-body {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .dlq-info {
     color: #888;
-    font-size: 11px;
+    font-size: 10px;  /* Smaller font */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.btn-dlq-investigate {
-    padding: 4px 12px;
-    background: #FA4616;
-    border: none;
-    border-radius: 4px;
-    color: #fff;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+.agent-info {
+    color: #FA4616;
+    font-weight: 500;
 }
 
-.btn-dlq-investigate:hover {
-    background: #ff5722;
-    transform: translateY(-1px);
+.investigation-progress {
+    height: 3px;  /* Smaller progress bar */
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
 }
 
-/* METRICS PANEL - THIRD ROW LEFT */
+.investigation-progress .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #FA4616, #8B4513);
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
+.investigation-progress .progress-bar.critical {
+    background: linear-gradient(90deg, #ff4444, #cc0000);
+}
+
+.investigation-progress .progress-bar.warning {
+    background: linear-gradient(90deg, #ffaa00, #ff6600);
+}
+
+.investigation-progress .progress-bar.ok {
+    background: linear-gradient(90deg, #44ff44, #00cc00);
+}
+
+.dlq-empty-state {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+}
+
+.dlq-empty-state p {
+    margin: 0;
+    font-size: 13px;
+    color: #888;
+}
+
+/* METRICS PANEL - FOURTH ROW LEFT */
 .module-card[data-module="metrics"] {
     grid-column: 1 !important;
-    grid-row: 3 !important;
+    grid-row: 4 !important;
     min-height: 300px !important;
     background: #1a1a1a !important;
     border: 1px solid #333 !important;
 }
 
-/* TIMELINE PANEL - THIRD ROW RIGHT */
-.module-card[data-module="timeline"] {
-    grid-column: 2 !important;
-    grid-row: 3 !important;
+/* ACTIONS PANEL - FOURTH ROW RIGHT */
+.module-card[data-module="actions"] {
+    grid-column: 2 / span 2 !important;
+    grid-row: 4 !important;
     min-height: 300px !important;
     background: #1a1a1a !important;
     border: 1px solid #333 !important;
 }
 
-/* Timeline Container */
+/* Timeline Container - Compact for right side placement */
 .timeline-container {
-    padding: 16px;
-    max-height: 250px;
+    padding: 12px;
+    max-height: 220px;  /* Smaller to fit below DLQ panel */
     overflow-y: auto;
 }
 

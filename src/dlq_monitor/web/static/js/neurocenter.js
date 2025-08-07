@@ -69,6 +69,11 @@ function initializeNeuroCenter() {
     initializeQueueMonitor();
     initializeAgentOverview();
     initializeMetrics();
+    
+    // Simulate active investigations for testing
+    setTimeout(() => {
+        simulateActiveInvestigations();
+    }, 1000);
     initializeTimeline();
     
     // Initialize Glass Room features
@@ -389,13 +394,14 @@ function createQueueCard(queue) {
     return card;
 }
 
-// Create DLQ card for Dead Letter Queues panel
+// Create DLQ card for Dead Letter Queues panel - enhanced for active investigations
 function createDLQCard(dlq) {
     const card = document.createElement('div');
-    card.className = 'dlq-card';
+    card.className = 'dlq-card active-investigation';
     card.dataset.dlqName = dlq.name;
     
     const statusClass = dlq.messages > 100 ? 'critical' : dlq.messages > 50 ? 'warning' : 'ok';
+    const agentInfo = dlq.agent ? `<span class="agent-info">Agent: ${dlq.agent}</span>` : '';
     
     card.innerHTML = `
         <div class="dlq-card-header">
@@ -404,33 +410,69 @@ function createDLQCard(dlq) {
         </div>
         <div class="dlq-card-body">
             <div class="dlq-info">
-                <span>Last checked: ${new Date().toLocaleTimeString()}</span>
+                <span>Age: ${dlq.age}</span>
+                ${agentInfo}
             </div>
-            <button class="btn-dlq-investigate" onclick="investigateSingleQueue('${dlq.name}')">
-                Investigate
-            </button>
+            <div class="investigation-progress">
+                <div class="progress-bar ${statusClass}" style="width: ${Math.min(100, (dlq.messages / 10))}%"></div>
+            </div>
         </div>
     `;
     
     return card;
 }
 
-// Update DLQ panel with cards
+// Update DLQ panel with cards - ONLY show actively investigated DLQs
 function updateDLQPanel() {
     const dlqList = document.getElementById('dlq-list');
     if (!dlqList) return;
     
     dlqList.innerHTML = '';
     
-    // Get DLQs from production queues or state
-    const dlqs = PRODUCTION_QUEUES.filter(name => name.includes('dlq')).map(name => ({
-        name: name,
-        messages: neuroState.dlqs.get(name)?.messages || 0
-    }));
+    // Only show DLQs that are being actively investigated
+    // Filter for DLQs with messages AND active investigations
+    const activeDLQs = Array.from(neuroState.dlqs.entries())
+        .filter(([name, data]) => {
+            // Check if DLQ has messages and is being investigated
+            const hasMessages = (data.messages || 0) > 0;
+            const isBeingInvestigated = neuroState.activeInvestigations.has(name) || 
+                                       Array.from(neuroState.agents.values()).some(agent => 
+                                           agent.queue === name && agent.status === 'active'
+                                       );
+            return hasMessages && (isBeingInvestigated || data.status === 'investigating');
+        })
+        .map(([name, data]) => ({
+            name: name,
+            messages: data.messages || 0,
+            status: data.status || 'unknown',
+            agent: data.agent || null,
+            age: data.age || 'Unknown'
+        }))
+        .sort((a, b) => b.messages - a.messages); // Sort by message count
     
     let critical = 0, warning = 0, ok = 0;
     
-    dlqs.forEach(dlq => {
+    // If no active investigations, show a placeholder
+    if (activeDLQs.length === 0) {
+        dlqList.innerHTML = `
+            <div class="dlq-empty-state">
+                <i data-lucide="inbox" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                <p style="opacity: 0.6; margin-top: 10px;">No active investigations</p>
+            </div>
+        `;
+        // Update badges to 0
+        document.getElementById('dlq-critical').textContent = 0;
+        document.getElementById('dlq-warning').textContent = 0;
+        document.getElementById('dlq-ok').textContent = 0;
+        
+        // Re-create icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+        return;
+    }
+    
+    activeDLQs.forEach(dlq => {
         const card = createDLQCard(dlq);
         dlqList.appendChild(card);
         
@@ -460,6 +502,55 @@ window.purgeSingleQueue = function(queueName) {
         showNotification(`Purging ${queueName}...`, 'warning');
     }
 };
+
+// Simulate active investigations for testing
+function simulateActiveInvestigations() {
+    console.log('🔬 Simulating active investigations for demo...');
+    
+    // Add some DLQs with active investigations
+    const activeDLQs = [
+        { name: 'fm-digitalguru-api-update-dlq-prod', messages: 794, age: 'Unknown' },
+        { name: 'fm-transaction-processor-dlq-prd', messages: 37, age: 'Unknown' },
+        { name: 'financial-move-send-email-handler-dlq-prod', messages: 0, age: 'Unknown' }
+    ];
+    
+    activeDLQs.forEach((dlq, index) => {
+        // Only show DLQs with messages as actively investigated
+        if (dlq.messages > 0) {
+            // Add to neuroState
+            neuroState.dlqs.set(dlq.name, {
+                name: dlq.name,
+                messages: dlq.messages,
+                status: 'investigating',
+                agent: 'Investigation Agent',
+                age: dlq.age
+            });
+            
+            // Mark as active investigation
+            neuroState.activeInvestigations.add(dlq.name);
+            
+            // Add a corresponding agent
+            const agent = {
+                id: `agent-${index}`,
+                name: 'Investigation Agent',
+                status: 'active',
+                queue: dlq.name,
+                progress: Math.min(100, Math.round((index + 1) * 33))
+            };
+            neuroState.agents.set(agent.id, agent);
+        }
+    });
+    
+    // Update the DLQ panel
+    updateDLQPanel();
+    
+    // Update agents display
+    Array.from(neuroState.agents.values()).forEach(agent => {
+        updateAgentDisplay(agent);
+    });
+    
+    console.log('✅ Active investigations simulated');
+}
 
 // Create queue table row (keeping for backward compatibility)
 function createQueueRow(queue) {
@@ -1044,6 +1135,9 @@ function handleQueueData(data) {
         
         // Sort by message count (highest first)
         dlqQueues.sort((a, b) => (b.messages || 0) - (a.messages || 0));
+        
+        // Update DLQ panel with active investigations
+        updateDLQPanel();
         
         // Clear and rebuild container with sorted DLQs
         container.innerHTML = '';
