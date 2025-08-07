@@ -3,22 +3,28 @@
 Enhanced DLQ Web Dashboard - Flask Backend with MCP Integration
 Real-time monitoring dashboard for AWS SQS Dead Letter Queues
 """
-import os
 import json
+import logging
+import os
 import subprocess
-import asyncio
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
-from flask import Flask, render_template, jsonify, request
-from flask_socketio import SocketIO, emit
-from flask_cors import CORS
+import sys
+import time
+import warnings
+from datetime import datetime
+from pathlib import Path
+from threading import Thread
+from typing import Any, Dict, List
+
 import boto3
 import requests
-from threading import Thread
-import time
-import logging
-import sys
-from pathlib import Path
+from flask import Flask, jsonify, render_template, request
+from flask_cors import CORS
+from flask_socketio import SocketIO, emit
+
+# Suppress blake2 hash warnings
+warnings.filterwarnings("ignore", category=UserWarning, module='_blake2')
+warnings.filterwarnings("ignore", message=".*blake2.*")
+os.environ['PYTHONWARNINGS'] = 'ignore'
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -55,33 +61,33 @@ stop_thread = False
 
 class MCPService:
     """Service to interact with MCP servers for AWS data"""
-    
+
     def __init__(self):
         self.aws_profile = os.environ.get('AWS_PROFILE', 'FABIO-PROD')
         self.aws_region = os.environ.get('AWS_REGION', 'sa-east-1')
         self.github_token = os.environ.get('GITHUB_TOKEN', '')
-        
+
         # Create boto3 session with profile
         session = boto3.Session(profile_name=self.aws_profile)
         self.sqs_client = session.client('sqs', region_name=self.aws_region)
         self.cloudwatch_client = session.client('logs', region_name=self.aws_region)
-    
+
     def get_all_queues(self) -> List[Dict[str, Any]]:
         """Get all SQS queues with their attributes"""
         try:
             response = self.sqs_client.list_queues()
             queues = []
-            
+
             if 'QueueUrls' in response:
                 for queue_url in response['QueueUrls']:
                     queue_name = queue_url.split('/')[-1]
-                    
+
                     # Get queue attributes
                     attrs = self.sqs_client.get_queue_attributes(
                         QueueUrl=queue_url,
                         AttributeNames=['All']
                     )['Attributes']
-                    
+
                     queues.append({
                         'name': queue_name,
                         'url': queue_url,
@@ -92,42 +98,42 @@ class MCPService:
                         'retention': str(int(attrs.get('MessageRetentionPeriod', 345600)) // 86400) + 'd',
                         'type': 'DLQ' if 'dlq' in queue_name.lower() else 'Standard'
                     })
-            
+
             return queues
         except Exception as e:
             logger.error(f"Error getting all queues: {e}")
             return []
-    
+
     def get_dlq_queues(self) -> List[Dict[str, Any]]:
         """Get ALL queues with detailed information"""
         try:
             response = self.sqs_client.list_queues()
             queues = []
-            
+
             if 'QueueUrls' in response:
                 for queue_url in response['QueueUrls']:
                     queue_name = queue_url.split('/')[-1]
-                    
+
                     # Get detailed attributes for each queue
                     attrs = self.sqs_client.get_queue_attributes(
                         QueueUrl=queue_url,
                         AttributeNames=['All']
                     )['Attributes']
-                    
+
                     # Determine if this is a DLQ based on name or redrive policy
                     is_dlq = 'dlq' in queue_name.lower() or 'dead' in queue_name.lower()
-                    
+
                     # Get redrive policy if it exists (shows if queue has a DLQ)
                     redrive_policy = attrs.get('RedrivePolicy', '{}')
                     has_dlq_config = 'deadLetterTargetArn' in redrive_policy
-                    
+
                     # Calculate age of oldest message if any
                     oldest_message_age = None
                     if int(attrs.get('ApproximateNumberOfMessages', 0)) > 0:
                         # This is approximate based on queue creation time
                         created = int(attrs.get('CreatedTimestamp', 0))
                         oldest_message_age = int(time.time()) - created
-                    
+
                     queue_data = {
                         'name': queue_name,
                         'url': queue_url,
@@ -144,20 +150,20 @@ class MCPService:
                         'isDLQ': is_dlq,
                         'hasDLQConfig': has_dlq_config,
                         'oldestMessageAge': oldest_message_age,
-                        'status': 'critical' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 100 else 
-                                 'warning' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 10 else 
+                        'status': 'critical' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 100 else
+                                 'warning' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 10 else
                                  'alert' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 0 else 'ok',
                         'accountId': '432817839790',
                         'region': self.aws_region
                     }
-                    
+
                     queues.append(queue_data)
-            
+
             return sorted(queues, key=lambda x: (not x['isDLQ'], -x['messages']))
         except Exception as e:
             logger.error(f"Error fetching DLQ queues: {e}")
             return []
-    
+
     def get_cloudwatch_logs(self, log_group: str, limit: int = 100) -> List[Dict[str, Any]]:
         """Get CloudWatch logs for a specific log group"""
         try:
@@ -167,7 +173,7 @@ class MCPService:
                 descending=True,
                 limit=5
             )
-            
+
             logs = []
             for stream in response.get('logStreams', []):
                 events = self.cloudwatch_client.get_log_events(
@@ -175,37 +181,37 @@ class MCPService:
                     logStreamName=stream['logStreamName'],
                     limit=limit // 5
                 )
-                
+
                 for event in events.get('events', []):
                     logs.append({
                         'timestamp': datetime.fromtimestamp(event['timestamp'] / 1000).isoformat(),
                         'message': event['message'],
                         'stream': stream['logStreamName']
                     })
-            
+
             return sorted(logs, key=lambda x: x['timestamp'], reverse=True)
         except Exception as e:
             logger.error(f"Error fetching CloudWatch logs: {e}")
             return []
-    
+
     def get_github_prs(self) -> List[Dict[str, Any]]:
         """Get GitHub PRs related to DLQ investigations"""
         if not self.github_token:
             return []
-        
+
         try:
             headers = {'Authorization': f'token {self.github_token}'}
             url = 'https://api.github.com/user/repos'
             response = requests.get(url, headers=headers, timeout=5)
-            
+
             prs = []
             if response.status_code == 200:
                 repos = response.json()[:10]
-                
+
                 for repo in repos:
                     pr_url = f"https://api.github.com/repos/{repo['full_name']}/pulls?state=open"
                     pr_response = requests.get(pr_url, headers=headers, timeout=5)
-                    
+
                     if pr_response.status_code == 200:
                         for pr in pr_response.json():
                             if any(kw in pr['title'].lower() for kw in ['dlq', 'dead letter', 'investigation']):
@@ -219,21 +225,21 @@ class MCPService:
                                     'author': pr['user']['login'],
                                     'state': pr['state']
                                 })
-            
+
             return sorted(prs, key=lambda x: x['updated'], reverse=True)
         except Exception as e:
             logger.error(f"Error fetching GitHub PRs: {e}")
             return []
-    
+
     def get_lambda_functions(self) -> List[Dict[str, Any]]:
         """Get Lambda functions related to DLQ processing"""
         try:
             session = boto3.Session(profile_name=self.aws_profile)
             lambda_client = session.client('lambda', region_name=self.aws_region)
-            
+
             response = lambda_client.list_functions()
             functions = []
-            
+
             for func in response.get('Functions', []):
                 if 'dlq' in func['FunctionName'].lower() or 'dead' in func['FunctionName'].lower():
                     functions.append({
@@ -245,7 +251,7 @@ class MCPService:
                         'timeout': func['Timeout'],
                         'state': func.get('State', 'Active')
                     })
-            
+
             return functions
         except Exception as e:
             logger.error(f"Error fetching Lambda functions: {e}")
@@ -255,27 +261,27 @@ mcp_service = MCPService()
 
 class InvestigationTracker:
     """Track active Claude investigations"""
-    
+
     def __init__(self):
         self.active_investigations = {}
         self.completed_investigations = []
         self.session_file = ".claude_sessions.json"
-    
+
     def load_sessions(self) -> Dict[str, Any]:
         """Load active Claude sessions"""
         try:
             if os.path.exists(self.session_file):
-                with open(self.session_file, 'r') as f:
+                with open(self.session_file) as f:
                     return json.load(f)
         except Exception as e:
             logger.error(f"Error loading sessions: {e}")
         return {}
-    
+
     def get_active_investigations(self) -> List[Dict[str, Any]]:
         """Get list of active investigations"""
         sessions = self.load_sessions()
         active = []
-        
+
         for session_id, session_data in sessions.items():
             if session_data.get('status') == 'active':
                 active.append({
@@ -285,7 +291,7 @@ class InvestigationTracker:
                     'pid': session_data.get('pid', 0),
                     'status': 'running'
                 })
-        
+
         return active
 
 investigation_tracker = InvestigationTracker()
@@ -315,10 +321,10 @@ def dashboard_summary():
     dlqs = mcp_service.get_dlq_queues()
     prs = mcp_service.get_github_prs()
     investigations = investigation_tracker.get_active_investigations()
-    
+
     total_messages = sum(q['messages'] for q in dlqs)
     alert_queues = [q for q in dlqs if q['status'] == 'alert']
-    
+
     return jsonify({
         'summary': {
             'totalDLQs': len(dlqs),
@@ -353,17 +359,17 @@ def get_dlq_messages(queue_name):
     try:
         queues = mcp_service.get_dlq_queues()
         queue = next((q for q in queues if q['name'] == queue_name), None)
-        
+
         if not queue:
             return jsonify({'error': 'Queue not found'}), 404
-        
+
         response = mcp_service.sqs_client.receive_message(
             QueueUrl=queue['url'],
             MaxNumberOfMessages=10,
             VisibilityTimeout=0,
             WaitTimeSeconds=0
         )
-        
+
         messages = []
         for msg in response.get('Messages', []):
             messages.append({
@@ -372,7 +378,7 @@ def get_dlq_messages(queue_name):
                 'attributes': msg.get('Attributes', {}),
                 'receivedTimestamp': msg.get('Attributes', {}).get('SentTimestamp', '')
             })
-        
+
         return jsonify(messages)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -398,13 +404,13 @@ def get_lambda_functions():
 def voice_settings():
     """Get or set voice notification settings"""
     global voice_notifications_enabled
-    
+
     if request.method == 'POST':
         data = request.json
         voice_notifications_enabled = data.get('enabled', True)
         os.environ['VOICE_NOTIFICATIONS_ENABLED'] = str(voice_notifications_enabled)
         return jsonify({'enabled': voice_notifications_enabled})
-    
+
     return jsonify({'enabled': voice_notifications_enabled})
 
 @app.route('/api/investigations')
@@ -417,16 +423,16 @@ def start_investigation():
     """Start a new Claude investigation"""
     data = request.json
     dlq_name = data.get('dlq_name')
-    
+
     if not dlq_name:
         return jsonify({'error': 'DLQ name required'}), 400
-    
+
     try:
         cmd = f"claude code --task 'Investigate DLQ {dlq_name} and create fix'"
         process = subprocess.Popen(cmd, shell=True)
-        
+
         investigation_id = f"inv_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        
+
         session_data = {
             investigation_id: {
                 'dlq_name': dlq_name,
@@ -435,13 +441,13 @@ def start_investigation():
                 'status': 'active'
             }
         }
-        
+
         sessions = investigation_tracker.load_sessions()
         sessions.update(session_data)
-        
+
         with open(investigation_tracker.session_file, 'w') as f:
             json.dump(sessions, f, indent=2)
-        
+
         return jsonify({
             'investigation_id': investigation_id,
             'status': 'started',
@@ -457,11 +463,11 @@ def background_monitor():
             # Emit DLQ updates
             dlqs = mcp_service.get_dlq_queues()
             socketio.emit('dlq_update', dlqs)
-            
+
             # Emit investigation updates
             investigations = investigation_tracker.get_active_investigations()
             socketio.emit('investigation_update', investigations)
-            
+
             # Emit agent status updates
             agents = get_agent_status()
             for agent_id, agent_data in agents.items():
@@ -472,15 +478,15 @@ def background_monitor():
                     'lastActivity': agent_data['lastActivity'],
                     'currentTask': agent_data['currentTask']
                 })
-            
+
             # Emit PR updates
             prs = mcp_service.get_github_prs()
             socketio.emit('pr_update', prs)
-            
+
             # Emit stats updates
             stats = get_system_stats()
             socketio.emit('stats_update', stats)
-            
+
             # Emit NeuroCenter updates if enabled
             if neurocenter_enabled and db_service:
                 # Emit DLQ updates for NeuroCenter
@@ -491,7 +497,7 @@ def background_monitor():
                         'region': 'sa-east-1',
                         'oldest_message': 'unknown'
                     })
-                
+
                 # Emit metrics for NeuroCenter
                 metrics = db_service.get_metrics_summary(hours=24)
                 socketio.emit('metrics_update', {
@@ -500,13 +506,13 @@ def background_monitor():
                     'prsGenerated': metrics['prs_created'],
                     'successRate': metrics['success_rate']
                 })
-                
+
                 # Emit active investigations from NeuroCenter
                 if investigation_service:
                     nc_investigations = investigation_service.get_active_investigations()
                     for inv in nc_investigations:
                         socketio.emit('investigation_update', inv)
-            
+
             time.sleep(5)
         except Exception as e:
             logger.error(f"Background monitor error: {e}")
@@ -539,7 +545,7 @@ def neurocenter_background_updates():
                         'messageRetentionPeriod': dlq.get('messageRetentionPeriod', 345600),
                         'oldestMessageAge': dlq.get('oldestMessageAge')
                     })
-                
+
                 # Send metrics update
                 if db_service:
                     metrics = db_service.get_metrics_summary(hours=24)
@@ -549,7 +555,7 @@ def neurocenter_background_updates():
                         'prsGenerated': metrics['prs_created'],
                         'successRate': metrics['success_rate']
                     })
-                
+
                 time.sleep(10)  # Update every 10 seconds
         except Exception as e:
             logger.error(f"Error in background updates: {e}")
@@ -559,10 +565,10 @@ def neurocenter_background_updates():
 def handle_connect():
     """Handle WebSocket connection"""
     global background_thread, stop_thread
-    
+
     emit('connected', {'data': 'Connected to DLQ Monitor'})
     logger.info('Client connected')
-    
+
     # Start background thread if not already running
     if background_thread is None or not background_thread.is_alive():
         stop_thread = False
@@ -581,10 +587,10 @@ def handle_update_request():
     """Handle manual update request"""
     dlqs = mcp_service.get_dlq_queues()
     emit('dlq_update', dlqs)
-    
+
     prs = mcp_service.get_github_prs()
     emit('pr_update', prs)
-    
+
     investigations = investigation_tracker.get_active_investigations()
     emit('investigation_update', investigations)
 
@@ -593,16 +599,16 @@ def handle_voice_settings(data):
     """Handle voice notification settings from web dashboard"""
     global voice_notifications_enabled
     voice_notifications_enabled = data.get('enabled', True)
-    
+
     # Set environment variable for other processes
     os.environ['VOICE_NOTIFICATIONS_ENABLED'] = 'True' if voice_notifications_enabled else 'False'
-    
+
     # Write to a file for persistence across processes
     voice_state_file = '/tmp/bhiveq/voice_state'
     os.makedirs('/tmp/bhiveq', exist_ok=True)
     with open(voice_state_file, 'w') as f:
         f.write('enabled' if voice_notifications_enabled else 'disabled')
-    
+
     logger.info(f"Voice notifications {'enabled' if voice_notifications_enabled else 'disabled'}")
     emit('voice_settings_updated', {'enabled': voice_notifications_enabled})
 
@@ -611,9 +617,9 @@ def handle_start_investigation(data):
     """Handle investigation request from web dashboard"""
     dlq_name = data.get('dlq')
     messages = data.get('messages', 0)
-    
+
     logger.info(f"Web dashboard requested investigation for {dlq_name} with {messages} messages")
-    
+
     # Trigger ADK investigation by writing to a trigger file
     trigger_file = os.path.join(os.path.dirname(__file__), '../../../.dlq_investigation_trigger')
     with open(trigger_file, 'w') as f:
@@ -623,12 +629,12 @@ def handle_start_investigation(data):
             'timestamp': datetime.now().isoformat(),
             'source': 'web_dashboard'
         }, f)
-    
+
     emit('alert', {
         'message': f'Investigation triggered for {dlq_name}',
         'type': 'success'
     })
-    
+
     # Update agent status immediately
     emit('agent_update', {
         'id': 'investigator',
@@ -676,7 +682,7 @@ def handle_get_queues():
     try:
         # Get all queues from AWS
         queues = mcp_service.get_all_queues()
-        
+
         # Send queue data
         emit('queue_data', {
             'queues': [
@@ -709,6 +715,62 @@ def handle_get_metrics():
             'successRate': metrics['success_rate']
         })
 
+@socketio.on('get_logs')
+def handle_get_logs(data):
+    """Get system logs"""
+    try:
+        lines = data.get('lines', 100)
+        log_level = data.get('level', 'all')
+
+        # Get the log file path
+        log_dir = os.path.join(os.path.dirname(__file__), '../../../logs')
+        log_file = os.path.join(log_dir, 'neurocenter.log')
+
+        # Read the log file
+        log_content = []
+        if os.path.exists(log_file):
+            with open(log_file) as f:
+                # Read last N lines
+                all_lines = f.readlines()
+                recent_lines = all_lines[-lines:] if len(all_lines) > lines else all_lines
+
+                # Filter by log level if needed
+                for line in recent_lines:
+                    if log_level == 'all' or log_level.upper() in line.upper():
+                        log_content.append(line.strip())
+        else:
+            log_content = ["Log file not found. Checking alternative locations..."]
+
+            # Try alternative log locations
+            alt_locations = [
+                'dlq_monitor_FABIO-PROD_sa-east-1.log',
+                'adk_monitor.log',
+                'web_dashboard.log'
+            ]
+
+            for alt_log in alt_locations:
+                alt_path = os.path.join(log_dir, alt_log)
+                if os.path.exists(alt_path):
+                    with open(alt_path) as f:
+                        all_lines = f.readlines()
+                        recent_lines = all_lines[-50:] if len(all_lines) > 50 else all_lines
+                        log_content.extend([f"--- {alt_log} ---"])
+                        log_content.extend([line.strip() for line in recent_lines])
+                        break
+
+        # Send logs back to frontend
+        emit('logs_data', {
+            'logs': '\n'.join(log_content) if log_content else 'No logs available',
+            'timestamp': datetime.now().isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching logs: {e}")
+        emit('logs_data', {
+            'logs': f'Error fetching logs: {str(e)}',
+            'timestamp': datetime.now().isoformat()
+        })
+
 @socketio.on('get_mappings')
 def handle_get_mappings():
     """Get agent-DLQ mappings"""
@@ -739,25 +801,25 @@ def handle_create_mapping(data):
 def handle_investigate_dlq(data):
     """Start investigation for a specific DLQ"""
     dlq_name = data.get('dlq_name')
-    
+
     if investigation_service:
         # Get DLQ details
         dlqs = mcp_service.get_dlq_queues()
         dlq = next((q for q in dlqs if q['name'] == dlq_name), None)
-        
+
         if dlq:
             # Start investigation using NeuroCenter service
             investigation_id = investigation_service.start_investigation(
                 dlq_name=dlq_name,
                 message_count=dlq['messages']
             )
-            
+
             emit('alert', {
                 'type': 'info',
                 'title': 'Investigation Started',
                 'message': f'Investigation {investigation_id} started for {dlq_name}'
             })
-            
+
             # Simulate investigation progress for demo
             if investigation_id:
                 thread = Thread(target=lambda: investigation_service.simulate_investigation(dlq_name, dlq['messages']))
@@ -790,14 +852,14 @@ def get_agent_status():
             'currentTask': None
         },
         'analyzer': {
-            'name': 'DLQ Analyzer', 
+            'name': 'DLQ Analyzer',
             'status': 'idle',
             'lastActivity': None,
             'currentTask': None
         },
         'debugger': {
             'name': 'Code Debugger',
-            'status': 'idle', 
+            'status': 'idle',
             'lastActivity': None,
             'currentTask': None
         },
@@ -808,15 +870,15 @@ def get_agent_status():
             'currentTask': None
         }
     }
-    
+
     # Check ADK monitor log for agent activity
     try:
         adk_log_path = os.path.join(os.path.dirname(__file__), '../../../logs/adk_monitor.log')
         if os.path.exists(adk_log_path):
             # Read last 100 lines of log
-            with open(adk_log_path, 'r') as f:
+            with open(adk_log_path) as f:
                 lines = f.readlines()[-100:]
-            
+
             # Parse for agent activity
             for line in reversed(lines):
                 if 'Investigation Agent' in line and 'investigating' in line.lower():
@@ -836,7 +898,7 @@ def get_agent_status():
                     agents['reviewer']['lastActivity'] = datetime.now().isoformat()
     except Exception as e:
         logger.debug(f"Could not read ADK monitor log: {e}")
-    
+
     return agents
 
 def get_system_stats():
@@ -844,7 +906,7 @@ def get_system_stats():
     try:
         dlqs = mcp_service.get_dlq_queues()
         total_messages = sum(dlq['messages'] for dlq in dlqs)
-        
+
         # Get today's investigations from sessions
         sessions = investigation_tracker.load_sessions()
         today = datetime.now().date()
@@ -852,7 +914,7 @@ def get_system_stats():
             1 for inv in sessions.values()
             if datetime.fromisoformat(inv['start_time']).date() == today
         )
-        
+
         return {
             'messagesProcessed': total_messages,
             'investigationsToday': today_investigations,
@@ -872,17 +934,17 @@ if __name__ == '__main__':
     thread = Thread(target=background_monitor)
     thread.daemon = True
     thread.start()
-    
+
     # Use port from environment or default
     port = int(os.environ.get('FLASK_PORT', 5001))
-    
+
     # Determine which dashboard we're running
     dashboard_type = "NeuroCenter" if neurocenter_enabled else "Enhanced DLQ Web Dashboard"
     logger.info(f"🚀 Starting {dashboard_type} on http://localhost:{port}")
     if neurocenter_enabled:
         logger.info(f"   NeuroCenter: http://localhost:{port}/neurocenter")
-    
+
     # Allow unsafe werkzeug for local development
     # In production, use a proper WSGI server like gunicorn
-    socketio.run(app, debug=False, host='0.0.0.0', port=port, 
+    socketio.run(app, debug=False, host='0.0.0.0', port=port,
                  allow_unsafe_werkzeug=True, log_output=False)

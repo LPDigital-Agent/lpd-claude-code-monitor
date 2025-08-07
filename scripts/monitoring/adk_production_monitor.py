@@ -10,13 +10,30 @@ import json
 import time
 import asyncio
 import logging
+import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+# Suppress blake2 hash warnings for Python 3.11 compatibility
+warnings.filterwarnings("ignore", category=UserWarning, module='_blake2')
+warnings.filterwarnings("ignore", message=".*blake2.*")
+
 # Add parent directories to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Load configuration
+import yaml
+config_path = Path(__file__).parent.parent.parent / 'config' / 'config.yaml'
+with open(config_path, 'r') as f:
+    config = yaml.safe_load(f)
+
+# Investigation Mode Control from config
+investigation_config = config.get('investigation', {})
+MANUAL_INVESTIGATION_ONLY = investigation_config.get('mode', 'manual') == 'manual'
+INVESTIGATION_THRESHOLD = investigation_config.get('auto_threshold', 10)
+COOLDOWN_MINUTES = investigation_config.get('cooldown_minutes', 30)
 
 # Configure logging
 logging.basicConfig(
@@ -49,7 +66,7 @@ class DLQMonitorAgent:
         self.region = os.environ.get('AWS_REGION', 'sa-east-1')
         self.session = boto3.Session(profile_name=self.profile)
         self.sqs_client = self.session.client('sqs', region_name=self.region)
-        self.critical_threshold = 10
+        self.critical_threshold = INVESTIGATION_THRESHOLD
         
     def check_dlqs(self) -> Dict[str, Any]:
         """Check all DLQs for messages"""
@@ -259,7 +276,7 @@ class CoordinatorAgent:
         
         # Cooldown tracking
         self.cooldowns = {}
-        self.cooldown_period = timedelta(minutes=30)
+        self.cooldown_period = timedelta(minutes=COOLDOWN_MINUTES)
         
         # Database service for NeuroCenter
         self.db_service = get_database_service()
@@ -309,30 +326,44 @@ class CoordinatorAgent:
                     if dlq['critical'] and not self.is_in_cooldown(dlq['name']):
                         logger.info(f"🚨 Critical DLQ detected: {dlq['name']} with {dlq['messages']} messages")
                         
-                        # Step 3: Send alert
-                        self.notifier.send_alert(dlq['name'], dlq['messages'])
-                        
-                        # Step 4: Start investigation
-                        analysis = self.investigator.analyze(dlq['name'], dlq['messages'])
-                        
-                        # Step 5: Implement fix
-                        fix = self.code_fixer.implement_fix(analysis)
-                        
-                        # Step 6: Create PR
-                        pr = self.pr_manager.create_pr(fix)
-                        
-                        # Step 7: Notify PR created
-                        self.notifier.notify_pr_created(pr)
-                        
-                        # Update cooldown
-                        self.cooldowns[dlq['name']] = datetime.now()
-                        
-                        # Emit to NeuroCenter
-                        self.emit_to_neurocenter('investigation_complete', {
-                            'dlq_name': dlq['name'],
-                            'investigation_id': analysis['investigation_id'],
-                            'pr_url': pr['pr_url']
-                        })
+                        # Check if we're in manual investigation mode
+                        if MANUAL_INVESTIGATION_ONLY:
+                            logger.info(f"📋 Manual mode enabled - NOT auto-investigating {dlq['name']}")
+                            logger.info(f"   Use NeuroCenter UI to manually trigger investigation")
+                            
+                            # Still emit status to NeuroCenter for display
+                            self.emit_to_neurocenter('dlq_critical', {
+                                'dlq_name': dlq['name'],
+                                'messages': dlq['messages'],
+                                'mode': 'manual',
+                                'awaiting_action': True
+                            })
+                        else:
+                            # Automatic investigation mode (original behavior)
+                            # Step 3: Send alert
+                            self.notifier.send_alert(dlq['name'], dlq['messages'])
+                            
+                            # Step 4: Start investigation
+                            analysis = self.investigator.analyze(dlq['name'], dlq['messages'])
+                            
+                            # Step 5: Implement fix
+                            fix = self.code_fixer.implement_fix(analysis)
+                            
+                            # Step 6: Create PR
+                            pr = self.pr_manager.create_pr(fix)
+                            
+                            # Step 7: Notify PR created
+                            self.notifier.notify_pr_created(pr)
+                            
+                            # Update cooldown
+                            self.cooldowns[dlq['name']] = datetime.now()
+                            
+                            # Emit to NeuroCenter
+                            self.emit_to_neurocenter('investigation_complete', {
+                                'dlq_name': dlq['name'],
+                                'investigation_id': analysis['investigation_id'],
+                                'pr_url': pr['pr_url']
+                            })
                         
                 # Step 8: Send PR reminders
                 self.notifier.send_pr_reminders()
@@ -370,13 +401,15 @@ class CoordinatorAgent:
 
 def main():
     """Main entry point"""
-    print("""
+    mode_status = "📋 MANUAL MODE - Auto-investigation DISABLED" if MANUAL_INVESTIGATION_ONLY else "🤖 AUTO MODE - Auto-investigation ENABLED"
+    print(f"""
 ╔═══════════════════════════════════════════════════════════════════╗
 ║     🧠 BHiveQ ADK Production Monitor - Multi-Agent System        ║
 ╠═══════════════════════════════════════════════════════════════════╣
 ║  Profile: FABIO-PROD | Region: sa-east-1                         ║
 ║  Monitoring Cycle: Every 30 seconds                              ║
 ║  Cooldown Period: 30 minutes                                     ║
+║  {mode_status:<65}║
 ╚═══════════════════════════════════════════════════════════════════╝
     """)
     

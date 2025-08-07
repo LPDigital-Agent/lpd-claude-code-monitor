@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Quick NeuroCenter launcher with clean output
+# Clean NeuroCenter launcher with proper dependencies
 
 cd "$(dirname "$0")" || exit 1
 
@@ -8,18 +8,14 @@ cd "$(dirname "$0")" || exit 1
 export FLASK_PORT=5002
 export AWS_PROFILE=FABIO-PROD
 export AWS_REGION=sa-east-1
-export PYTHONWARNINGS="ignore::UserWarning"
-export PYTHONHASHSEED=0
+export PYTHONWARNINGS="ignore"
 export PYTHONPATH="${PYTHONPATH}:$(pwd)/src:$(pwd)"
 
-# Suppress blake2 warnings
-export PYTHONWARNINGS="ignore"
+# Kill any existing processes
+pkill -f "python.*app.py" 2>/dev/null
 
-# Activate venv
-source venv/bin/activate 2>/dev/null
-
-# Install deps silently
-pip install -q SQLAlchemy flask-sqlalchemy 2>/dev/null
+# Clear database
+rm -f src/dlq_monitor/database/neurocenter.db
 
 clear
 
@@ -29,7 +25,13 @@ echo "════════════════════════�
 echo ""
 echo "  ✅ Manual investigation mode ENABLED"
 echo "  ✅ Database cleaned on startup"
+echo "  ✅ No automatic investigations"
 echo ""
 
-# Use system Python instead of pyenv Python to avoid blake2 issues
-exec /usr/bin/python3 -W ignore src/dlq_monitor/web/app.py 2>&1 | grep -v "blake2" | grep -v "ValueError.*blake2" | grep -v "ERROR:root" | grep -v "unsupported hash type"
+# Run with system Python and all warnings suppressed
+exec /usr/bin/python3 -W ignore src/dlq_monitor/web/app.py 2>&1 | \
+    grep -v "blake2" | \
+    grep -v "ValueError" | \
+    grep -v "ERROR:root" | \
+    grep -v "unsupported hash type" | \
+    grep -v "WARNING:werkzeug"

@@ -121,18 +121,24 @@ function initializeWebSocket() {
     neuroState.socket.on('alert', handleSystemAlert);
     neuroState.socket.on('pr_created', handlePRCreated);
     neuroState.socket.on('queue_data', handleQueueData);
+    neuroState.socket.on('logs_data', handleLogsData);
 }
 
 // Request initial data from server
 function requestInitialData() {
-    // Clear all panels first
-    clearAllPanels();
+    // Only clear investigation-related panels, not AWS SQS Monitor
+    clearInvestigationPanels();
     
-    neuroState.socket.emit('get_agents');
-    neuroState.socket.emit('get_investigations');
-    neuroState.socket.emit('get_dlqs');
-    neuroState.socket.emit('get_metrics');
+    // Request AWS SQS queue data - this MUST be fetched
     neuroState.socket.emit('get_queues');
+    
+    // Request metrics (will be empty until investigations start)
+    neuroState.socket.emit('get_metrics');
+    
+    // Don't request agents/investigations/dlqs yet - wait for real data
+    // neuroState.socket.emit('get_agents');
+    // neuroState.socket.emit('get_investigations');
+    // neuroState.socket.emit('get_dlqs');
 }
 
 // Clear all panels to empty state
@@ -176,6 +182,67 @@ function clearAllPanels() {
         const elem = document.getElementById(id);
         if (elem) elem.textContent = 0;
     });
+    
+    // Re-create lucide icons
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+// Clear only investigation-related panels (NOT AWS SQS Monitor)
+function clearInvestigationPanels() {
+    // Clear Dead Letter Queues panel (only shows actively investigated DLQs)
+    const dlqList = document.getElementById('dlq-list');
+    if (dlqList) {
+        dlqList.innerHTML = `
+            <div class="dlq-empty-state">
+                <i data-lucide="inbox" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                <p style="opacity: 0.6; margin-top: 10px;">No active investigations</p>
+            </div>
+        `;
+    }
+    
+    // Clear Investigation Timeline
+    const timeline = document.getElementById('investigation-timeline');
+    if (timeline) {
+        timeline.innerHTML = `
+            <div class="timeline-empty-state" style="text-align: center; padding: 40px; color: #666;">
+                <i data-lucide="activity" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                <p style="opacity: 0.6; margin-top: 10px;">No investigations yet</p>
+            </div>
+        `;
+    }
+    
+    // Clear agents container
+    const agentsContainer = document.getElementById('agents-container');
+    if (agentsContainer) {
+        agentsContainer.innerHTML = `
+            <div class="agents-empty-state" style="text-align: center; padding: 40px; color: #666;">
+                <i data-lucide="users" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                <p style="opacity: 0.6; margin-top: 10px;">No active agents</p>
+            </div>
+        `;
+    }
+    
+    // Clear recent actions
+    const actions = document.getElementById('recent-actions');
+    if (actions) {
+        actions.innerHTML = `
+            <div class="actions-empty-state" style="text-align: center; padding: 20px; color: #666;">
+                <p style="opacity: 0.6;">No recent actions</p>
+            </div>
+        `;
+    }
+    
+    // Update badges to 0
+    const badges = ['dlq-critical', 'dlq-warning', 'dlq-ok'];
+    badges.forEach(id => {
+        const elem = document.getElementById(id);
+        if (elem) elem.textContent = 0;
+    });
+    
+    // IMPORTANT: DO NOT clear AWS SQS Monitor - it should always show available queues
+    // The AWS SQS Queue Monitor panel stays intact to show DLQ queues for selection
     
     // Re-create lucide icons
     if (typeof lucide !== 'undefined') {
@@ -360,15 +427,24 @@ function loadProductionQueues() {
         return;
     }
     
-    // Clear container and don't pre-populate with any queues
-    container.innerHTML = '<div class="loading-placeholder" style="text-align: center; padding: 40px; color: #666;">Waiting for AWS queue data...</div>';
+    // Show loading message
+    container.innerHTML = '<div class="loading-placeholder" style="text-align: center; padding: 40px; color: #666;">Loading AWS queue data...</div>';
     
     // Update DLQ panel - will only show if agents are active
     updateDLQPanel();
     
     // Request real queue data from AWS
-    if (neuroState.socket) {
+    if (neuroState.socket && neuroState.socket.connected) {
+        console.log('🔄 Requesting queue data from AWS...');
         neuroState.socket.emit('get_queues');
+    } else {
+        console.log('⚠️ Socket not connected, waiting for connection...');
+        // Try again after connection
+        setTimeout(() => {
+            if (neuroState.socket && neuroState.socket.connected) {
+                neuroState.socket.emit('get_queues');
+            }
+        }, 1000);
     }
 }
 
@@ -760,28 +836,44 @@ function addTimelineEvent(event) {
     const timeline = document.getElementById('investigation-timeline');
     if (!timeline) return;
     
+    // Check if timeline is empty and remove empty state
+    if (timeline.querySelector('.timeline-empty-state')) {
+        timeline.innerHTML = '';
+    }
+    
     // Create timeline entry
     const entry = document.createElement('div');
     entry.className = 'timeline-entry';
     entry.dataset.id = event.id || Date.now();
+    entry.dataset.status = event.status || 'active';
     
     const time = event.startTime ? new Date(event.startTime).toLocaleTimeString() : new Date().toLocaleTimeString();
     const statusClass = event.status === 'completed' ? 'success' : event.status === 'failed' ? 'error' : 'active';
+    
+    // Build comprehensive display with all available information
+    const dlqName = event.dlq || event.title || 'Unknown DLQ';
+    const agentName = event.agent || 'Investigation Agent';
+    const description = event.description || `${agentName} is investigating ${dlqName}`;
+    const messageCount = event.message_count ? ` (${event.message_count} messages)` : '';
     
     entry.innerHTML = `
         <div class="timeline-marker ${statusClass}"></div>
         <div class="timeline-content">
             <div class="timeline-header">
-                <span class="timeline-title">${event.dlq || event.title || 'Investigation'}</span>
+                <span class="timeline-title">
+                    <strong>DLQ:</strong> ${dlqName}${messageCount}
+                </span>
                 <span class="timeline-time">${time}</span>
             </div>
             <div class="timeline-description">
-                ${event.description || event.agent || 'Processing...'}
+                <div><strong>Agent:</strong> ${agentName}</div>
+                <div><strong>Action:</strong> ${description}</div>
+                <div><strong>Status:</strong> <span class="status-badge ${statusClass}">${event.status || 'Active'}</span></div>
             </div>
             ${event.progress ? `
                 <div class="timeline-progress">
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${event.progress}%"></div>
+                        <div class="progress-fill ${statusClass}" style="width: ${event.progress}%"></div>
                     </div>
                     <span class="progress-text">${event.progress}%</span>
                 </div>
@@ -1094,14 +1186,26 @@ function handleInvestigationUpdate(data) {
     neuroState.investigations.set(data.id, data);
     updateInvestigationDisplay(data);
     
+    // Ensure we have comprehensive information for the timeline
+    const dlqName = data.dlq || data.dlq_name || data.queue || 'Unknown DLQ';
+    const agentName = data.agent || data.agent_name || 'Investigation Agent';
+    const status = data.status || 'investigating';
+    const progress = data.progress || 0;
+    
+    // Create detailed description
+    const description = data.description || 
+        `${agentName} is investigating ${dlqName} (${data.message_count || 0} messages)`;
+    
     addTimelineEvent({
-        id: data.id,
-        dlq: data.dlq,
-        status: data.status,
-        startTime: data.startTime,
-        agent: data.agent || 'Investigation Agent',
-        description: data.description,
-        progress: data.progress
+        id: data.id || `inv_${Date.now()}`,
+        dlq: dlqName,
+        status: status,
+        startTime: data.startTime || data.start_time || new Date().toISOString(),
+        agent: agentName,
+        description: description,
+        progress: progress,
+        title: `Investigation: ${dlqName}`,
+        message_count: data.message_count || 0
     });
 }
 
@@ -1200,6 +1304,44 @@ function handleQueueData(data) {
     }
 }
 
+function handleLogsData(data) {
+    const logContent = document.getElementById('log-content');
+    if (!logContent) return;
+    
+    if (data.logs) {
+        // Format the logs for display
+        const formattedLogs = data.logs.split('\n').map(line => {
+            // Color code based on log level
+            if (line.includes('ERROR') || line.includes('CRITICAL')) {
+                return `<span style="color: #ff4444;">${line}</span>`;
+            } else if (line.includes('WARNING') || line.includes('WARN')) {
+                return `<span style="color: #ffaa00;">${line}</span>`;
+            } else if (line.includes('INFO')) {
+                return `<span style="color: #00aaff;">${line}</span>`;
+            } else if (line.includes('DEBUG')) {
+                return `<span style="color: #888888;">${line}</span>`;
+            }
+            return line;
+        }).join('\n');
+        
+        logContent.innerHTML = `<pre style="font-family: monospace; font-size: 12px; line-height: 1.4; overflow-x: auto;">${formattedLogs}</pre>`;
+        
+        // Auto-scroll to bottom
+        logContent.scrollTop = logContent.scrollHeight;
+    } else {
+        logContent.innerHTML = '<pre style="color: #666;">No logs available</pre>';
+    }
+    
+    // Update timestamp if provided
+    if (data.timestamp) {
+        const timestamp = new Date(data.timestamp).toLocaleTimeString();
+        const logsViewer = document.querySelector('.logs-viewer h4');
+        if (logsViewer) {
+            logsViewer.textContent = `System Logs - Last updated: ${timestamp}`;
+        }
+    }
+}
+
 // Update displays
 function updateAgentDisplay(agent) {
     const container = document.getElementById('agents-container');
@@ -1270,44 +1412,7 @@ function updateDLQDisplay(dlq) {
     // Already handled in handleDLQUpdate
 }
 
-function updateDLQPanel() {
-    const dlqList = document.getElementById('dlq-list');
-    if (!dlqList) return;
-    
-    dlqList.innerHTML = '';
-    
-    let criticalCount = 0;
-    let warningCount = 0;
-    let okCount = 0;
-    
-    neuroState.dlqs.forEach(dlq => {
-        const statusClass = dlq.messages > 100 ? 'critical' : dlq.messages > 50 ? 'warning' : '';
-        
-        if (statusClass === 'critical') criticalCount++;
-        else if (statusClass === 'warning') warningCount++;
-        else okCount++;
-        
-        const item = document.createElement('div');
-        item.className = `dlq-item ${statusClass}`;
-        
-        item.innerHTML = `
-            <div class="dlq-info">
-                <div class="dlq-name">${dlq.name}</div>
-                <div class="dlq-stats">
-                    Messages: ${dlq.messages} | Age: ${dlq.age || 'Unknown'}
-                </div>
-            </div>
-            <div class="dlq-count ${statusClass}">${dlq.messages}</div>
-        `;
-        
-        dlqList.appendChild(item);
-    });
-    
-    // Update badges
-    document.getElementById('dlq-critical').textContent = criticalCount;
-    document.getElementById('dlq-warning').textContent = warningCount;
-    document.getElementById('dlq-ok').textContent = okCount;
-}
+// REMOVED DUPLICATE updateDLQPanel() - Using the correct one at line 533 that filters for active investigations
 
 // Add recent action
 function addRecentAction(action) {
@@ -1542,8 +1647,8 @@ function startAutoRefresh() {
 // Load initial data
 function loadInitialData() {
     // Don't add any demo data - wait for real data
-    // Clear all panels to ensure empty state
-    clearAllPanels();
+    // Clear only investigation panels - NOT AWS SQS Monitor
+    clearInvestigationPanels();
     
     // Initialize metrics to 0
     neuroState.metrics = {
@@ -1553,13 +1658,9 @@ function loadInitialData() {
         successRate: 0
     };
     updateMetricsDisplay();
-        
-        // Update DLQ badges
-        document.getElementById('dlq-critical').textContent = '0';
-        document.getElementById('dlq-warning').textContent = '0';
-        document.getElementById('dlq-ok').textContent = '5';
-        
-    }, 1000);
+    
+    // Request initial data from server (including AWS SQS queues)
+    requestInitialData();
 }
 
 // Export for debugging

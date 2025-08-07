@@ -42,6 +42,13 @@ alert_formatting:
   queue_name_emphasis: "🚨 DLQ ALERT - {queue_name} 🚨"
   include_metadata: true             # Include region, account, timestamp
   console_colors: true               # Colored output in terminal
+
+# Investigation settings - Control how investigations are triggered
+investigation:
+  mode: "manual"                     # "manual" or "automatic" - controls investigation triggering
+  auto_threshold: 10                 # Only used if mode is "automatic" - messages threshold
+  cooldown_minutes: 30               # Minutes before same DLQ can be investigated again
+  manual_ui_only: true               # When true, investigations can only start from UI
   
 # Demo settings (for testing without AWS)
 demo:
