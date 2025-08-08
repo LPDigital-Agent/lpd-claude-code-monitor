@@ -10,10 +10,10 @@ import subprocess
 import sys
 import time
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from threading import Thread
-from typing import Any, Dict, List
+from threading import Lock, Thread
+from typing import Any, Dict, List, Optional, Tuple
 
 import boto3
 import requests
@@ -72,6 +72,11 @@ class MCPService:
         self.sqs_client = session.client('sqs', region_name=self.aws_region)
         self.cloudwatch_client = session.client('logs', region_name=self.aws_region)
 
+        # Cache for DLQ data with TTL
+        self._dlq_cache: Optional[Tuple[List[Dict[str, Any]], datetime]] = None
+        self._cache_lock = Lock()
+        self._cache_ttl = timedelta(seconds=10)  # Cache for 10 seconds
+
     def get_all_queues(self) -> List[Dict[str, Any]]:
         """Get all SQS queues with their attributes"""
         try:
@@ -105,63 +110,107 @@ class MCPService:
             return []
 
     def get_dlq_queues(self) -> List[Dict[str, Any]]:
-        """Get ALL queues with detailed information"""
+        """Get ALL queues with detailed information - optimized with caching and batch operations"""
+        with self._cache_lock:
+            # Check cache first
+            if self._dlq_cache is not None:
+                cached_data, cache_time = self._dlq_cache
+                if datetime.now() - cache_time < self._cache_ttl:
+                    logger.debug(f"Returning cached DLQ data ({len(cached_data)} queues)")
+                    return cached_data
+
+        start_time = time.time()
+        logger.info("Fetching fresh DLQ data from AWS...")
+
         try:
+            # First, just get the list of queues (fast operation)
             response = self.sqs_client.list_queues()
             queues = []
 
-            if 'QueueUrls' in response:
-                for queue_url in response['QueueUrls']:
-                    queue_name = queue_url.split('/')[-1]
+            if 'QueueUrls' not in response:
+                logger.info("No queues found in AWS account")
+                return []
 
-                    # Get detailed attributes for each queue
+            queue_urls = response['QueueUrls']
+            logger.info(f"Found {len(queue_urls)} queues, fetching attributes...")
+
+            # Filter to only DLQ queues to reduce API calls
+            dlq_urls = [url for url in queue_urls if 'dlq' in url.lower() or 'dead' in url.lower()]
+            logger.info(f"Filtered to {len(dlq_urls)} DLQ queues")
+
+            # Process DLQ queues with minimal attributes for speed
+            for queue_url in dlq_urls:
+                queue_name = queue_url.split('/')[-1]
+
+                try:
+                    # Only get essential attributes for performance
                     attrs = self.sqs_client.get_queue_attributes(
                         QueueUrl=queue_url,
-                        AttributeNames=['All']
+                        AttributeNames=[
+                            'ApproximateNumberOfMessages',
+                            'ApproximateNumberOfMessagesNotVisible',
+                            'ApproximateNumberOfMessagesDelayed',
+                            'QueueArn'
+                        ]
                     )['Attributes']
 
-                    # Determine if this is a DLQ based on name or redrive policy
-                    is_dlq = 'dlq' in queue_name.lower() or 'dead' in queue_name.lower()
-
-                    # Get redrive policy if it exists (shows if queue has a DLQ)
-                    redrive_policy = attrs.get('RedrivePolicy', '{}')
-                    has_dlq_config = 'deadLetterTargetArn' in redrive_policy
-
-                    # Calculate age of oldest message if any
-                    oldest_message_age = None
-                    if int(attrs.get('ApproximateNumberOfMessages', 0)) > 0:
-                        # This is approximate based on queue creation time
-                        created = int(attrs.get('CreatedTimestamp', 0))
-                        oldest_message_age = int(time.time()) - created
+                    messages = int(attrs.get('ApproximateNumberOfMessages', 0))
 
                     queue_data = {
                         'name': queue_name,
                         'url': queue_url,
                         'arn': attrs.get('QueueArn', ''),
-                        'messages': int(attrs.get('ApproximateNumberOfMessages', 0)),
+                        'messages': messages,
                         'messagesNotVisible': int(attrs.get('ApproximateNumberOfMessagesNotVisible', 0)),
                         'messagesDelayed': int(attrs.get('ApproximateNumberOfMessagesDelayed', 0)),
-                        'createdTimestamp': attrs.get('CreatedTimestamp', ''),
-                        'lastModifiedTimestamp': attrs.get('LastModifiedTimestamp', ''),
-                        'visibilityTimeout': int(attrs.get('VisibilityTimeout', 30)),
-                        'maximumMessageSize': int(attrs.get('MaximumMessageSize', 262144)),
-                        'messageRetentionPeriod': int(attrs.get('MessageRetentionPeriod', 345600)),
-                        'receiveMessageWaitTime': int(attrs.get('ReceiveMessageWaitTimeSeconds', 0)),
-                        'isDLQ': is_dlq,
-                        'hasDLQConfig': has_dlq_config,
-                        'oldestMessageAge': oldest_message_age,
-                        'status': 'critical' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 100 else
-                                 'warning' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 10 else
-                                 'alert' if int(attrs.get('ApproximateNumberOfMessages', 0)) > 0 else 'ok',
+                        'createdTimestamp': '',
+                        'lastModifiedTimestamp': '',
+                        'visibilityTimeout': 30,
+                        'maximumMessageSize': 262144,
+                        'messageRetentionPeriod': 345600,
+                        'receiveMessageWaitTime': 0,
+                        'isDLQ': True,
+                        'hasDLQConfig': False,
+                        'oldestMessageAge': None,
+                        'status': 'critical' if messages > 100 else
+                                 'warning' if messages > 10 else
+                                 'alert' if messages > 0 else 'ok',
                         'accountId': '432817839790',
                         'region': self.aws_region
                     }
 
                     queues.append(queue_data)
+                except Exception as e:
+                    logger.warning(f"Error fetching attributes for queue {queue_name}: {e}")
+                    # Add queue with minimal data even if attributes fail
+                    queues.append({
+                        'name': queue_name,
+                        'url': queue_url,
+                        'messages': 0,
+                        'messagesNotVisible': 0,
+                        'isDLQ': True,
+                        'status': 'unknown',
+                        'region': self.aws_region
+                    })
 
-            return sorted(queues, key=lambda x: (not x['isDLQ'], -x['messages']))
+            # Sort by message count (highest first)
+            sorted_queues = sorted(queues, key=lambda x: -x.get('messages', 0))
+
+            # Update cache
+            with self._cache_lock:
+                self._dlq_cache = (sorted_queues, datetime.now())
+
+            elapsed_time = time.time() - start_time
+            logger.info(f"DLQ fetch completed in {elapsed_time:.2f} seconds for {len(sorted_queues)} queues")
+
+            return sorted_queues
+
         except Exception as e:
             logger.error(f"Error fetching DLQ queues: {e}")
+            # Return cached data if available, even if expired
+            if self._dlq_cache is not None:
+                logger.warning("Returning stale cached data due to error")
+                return self._dlq_cache[0]
             return []
 
     def get_cloudwatch_logs(self, log_group: str, limit: int = 100) -> List[Dict[str, Any]]:
@@ -351,6 +400,15 @@ def get_status():
 @app.route('/api/dlqs')
 def get_dlqs():
     """Get all DLQ queues with details"""
+    # Check if this is a force refresh request
+    force_refresh = request.args.get('refresh', 'false').lower() == 'true'
+
+    if force_refresh:
+        logger.info("Force refresh requested - bypassing cache")
+        # Clear the cache to force fresh data
+        with mcp_service._cache_lock:
+            mcp_service._dlq_cache = None
+
     return jsonify(mcp_service.get_dlq_queues())
 
 @app.route('/api/dlqs/<queue_name>/messages')
@@ -384,11 +442,75 @@ def get_dlq_messages(queue_name):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/cloudwatch/logs')
-def get_logs():
+def get_cloudwatch_logs_endpoint():
     """Get CloudWatch logs"""
     log_group = request.args.get('logGroup', '/aws/lambda/dlq-processor')
     limit = int(request.args.get('limit', 100))
     return jsonify(mcp_service.get_cloudwatch_logs(log_group, limit))
+
+@app.route('/api/logs')
+def get_logs():
+    """Get system logs from all available log files"""
+    try:
+        level = request.args.get('level', 'all').lower()
+        lines = int(request.args.get('lines', 1000))  # Increased default
+
+        logs = []
+        base_path = Path(__file__).parent.parent.parent.parent
+
+        # List of all log files to check
+        log_files = [
+            ('Main Monitor', 'dlq_monitor_FABIO-PROD_sa-east-1.log'),
+            ('NeuroCenter Backend', 'logs/neurocenter_backend.log'),
+            ('NeuroCenter Frontend', 'logs/neurocenter_next.log'),
+            ('ADK Monitor', 'logs/adk_monitor.log'),
+            ('Web Dashboard', 'logs/web_dashboard.log'),
+            ('DLQ Monitor', 'logs/dlq_monitor.log')
+        ]
+
+        # Collect logs from all available files
+        for log_name, log_file in log_files:
+            log_path = base_path / log_file
+
+            if log_path.exists():
+                try:
+                    with open(log_path) as f:
+                        all_lines = f.readlines()
+                        # Get last N lines from each log - increased to show more content
+                        lines_per_file = 200  # Show up to 200 lines per file
+                        recent_lines = all_lines[-lines_per_file:] if len(all_lines) > lines_per_file else all_lines
+
+                        # Add header for this log file
+                        if recent_lines:
+                            logs.append(f"\n{'='*60}")
+                            logs.append(f"[{log_name}] - {log_file}")
+                            logs.append(f"{'='*60}")
+
+                            # Filter by level if needed
+                            for line in recent_lines:
+                                if level == 'all':
+                                    logs.append(line.strip())
+                                elif level in line.lower():
+                                    logs.append(line.strip())
+                except Exception as e:
+                    logs.append(f"[{log_name}] Error reading file: {e}")
+
+        # If no logs found at all
+        if not logs:
+            logs.append("No log files found. Available paths checked:")
+            for log_name, log_file in log_files:
+                logs.append(f"  - {log_file}")
+
+        return jsonify({
+            'logs': '\n'.join(logs),
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error fetching logs: {e}")
+        return jsonify({
+            'logs': f'Error fetching logs: {str(e)}',
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @app.route('/api/github/prs')
 def get_prs():

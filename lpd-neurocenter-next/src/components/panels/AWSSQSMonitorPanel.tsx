@@ -2,7 +2,7 @@
 
 import { Database, RefreshCw, Search, ChevronDown, CheckSquare, Square, AlertCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 interface Queue {
@@ -16,27 +16,69 @@ interface Queue {
   selected: boolean
 }
 
-async function fetchQueues(): Promise<Queue[]> {
-  const response = await fetch('/api/flask/api/dlqs')
-  if (!response.ok) throw new Error('Failed to fetch queues')
-  const data = await response.json()
+async function fetchQueues(forceRefresh = false): Promise<Queue[]> {
+  console.log('[AWSSQSMonitor] Fetching DLQ data...', forceRefresh ? '(force refresh)' : '')
   
-  // The API returns an array directly
-  const queues = Array.isArray(data) ? data : (data.dlqs || [])
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
   
-  return queues
-    .filter((q: any) => q.isDLQ !== false) // Only show DLQs
-    .sort((a: any, b: any) => b.messages - a.messages)
-    .map((q: any) => ({
-      id: q.url || q.name,
-      name: q.name,
-      url: q.url || q.name,
-      messages: q.messages || 0,
-      inFlight: q.messagesNotVisible || 0,
-      region: q.region || 'sa-east-1',
-      isDLQ: true,
-      selected: false
-    }))
+  try {
+    // Add cache-busting parameter when forcing refresh
+    const url = forceRefresh 
+      ? `/api/flask/api/dlqs?refresh=true&t=${Date.now()}`
+      : '/api/flask/api/dlqs'
+    
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        // Add cache control headers to prevent browser caching
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+    })
+    
+    clearTimeout(timeoutId)
+    
+    if (!response.ok) {
+      console.error('[AWSSQSMonitor] API response not OK:', response.status, response.statusText)
+      throw new Error(`Failed to fetch queues: ${response.status} ${response.statusText}`)
+    }
+    
+    const data = await response.json()
+    console.log('[AWSSQSMonitor] Received data:', data)
+    
+    // The API returns an array directly
+    const queues = Array.isArray(data) ? data : (data.dlqs || [])
+    
+    const processed = queues
+      .filter((q: any) => q.isDLQ !== false) // Only show DLQs
+      .sort((a: any, b: any) => b.messages - a.messages)
+      .map((q: any) => ({
+        id: q.url || q.name,
+        name: q.name,
+        url: q.url || q.name,
+        messages: q.messages || 0,
+        inFlight: q.messagesNotVisible || 0,
+        region: q.region || 'sa-east-1',
+        isDLQ: true,
+        selected: false
+      }))
+    
+    console.log(`[AWSSQSMonitor] Processed ${processed.length} DLQ queues`)
+    return processed
+  } catch (error) {
+    clearTimeout(timeoutId)
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        console.error('[AWSSQSMonitor] Request timeout after 10 seconds')
+        throw new Error('Request timeout - AWS API is taking too long to respond')
+      }
+      console.error('[AWSSQSMonitor] Fetch error:', error.message)
+    }
+    throw error
+  }
 }
 
 async function triggerInvestigation(queueNames: string[]) {
@@ -50,17 +92,38 @@ async function triggerInvestigation(queueNames: string[]) {
 }
 
 export function AWSSQSMonitorPanel() {
+  const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState('dlq')
   const [collapsed, setCollapsed] = useState(false)
   const [selectedQueues, setSelectedQueues] = useState<Set<string>>(new Set())
   const [investigating, setInvestigating] = useState<Set<string>>(new Set())
+  const [isRefreshing, setIsRefreshing] = useState(false)
   
   const { data: queues = [], isLoading, refetch } = useQuery({
     queryKey: ['production-queues'],
-    queryFn: fetchQueues,
+    queryFn: () => fetchQueues(false),
     refetchInterval: 30000,
   })
+  
+  // Manual refresh function that bypasses cache
+  const handleManualRefresh = async () => {
+    console.log('[AWSSQSMonitor] Manual refresh triggered')
+    setIsRefreshing(true)
+    try {
+      // Invalidate the cache and force refetch
+      await queryClient.invalidateQueries({ queryKey: ['production-queues'] })
+      // Force fresh fetch with cache bypass
+      const freshData = await fetchQueues(true)
+      queryClient.setQueryData(['production-queues'], freshData)
+      toast.success('Queue data refreshed')
+    } catch (error) {
+      console.error('[AWSSQSMonitor] Refresh error:', error)
+      toast.error('Failed to refresh queue data')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
   
   // Fetch active investigations to show which queues are being investigated
   const { data: activeInvestigations = [] } = useQuery({
@@ -168,10 +231,11 @@ export function AWSSQSMonitorPanel() {
               </div>
             )}
             <button 
-              onClick={() => refetch()}
-              className="p-1.5 rounded-md bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-white transition-all duration-200"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing || isLoading}
+              className="p-1.5 rounded-md bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${(isRefreshing || isLoading) ? 'animate-spin' : ''}`} />
             </button>
             <button 
               onClick={handleInvestigateSelected}
