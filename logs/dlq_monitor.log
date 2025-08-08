@@ -1,0 +1,73 @@
+ERROR:root:code for hash blake2b was not found.
+Traceback (most recent call last):
+  File "/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/hashlib.py", line 307, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/hashlib.py", line 129, in __get_openssl_constructor
+    return __get_builtin_constructor(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type blake2b
+ERROR:root:code for hash blake2s was not found.
+Traceback (most recent call last):
+  File "/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/hashlib.py", line 307, in <module>
+    globals()[__func_name] = __get_hash(__func_name)
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/hashlib.py", line 129, in __get_openssl_constructor
+    return __get_builtin_constructor(name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/hashlib.py", line 123, in __get_builtin_constructor
+    raise ValueError('unsupported hash type ' + name)
+ValueError: unsupported hash type blake2s
+WARNING:root:pygame not available - audio notifications will be disabled
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:dlq_monitor.notifiers.pr_audio:Audio notifications disabled - pygame not available
+CRITICAL:__main__:🚨 CRITICAL DLQ ALERT 🚨
+CRITICAL:__main__:📋 QUEUE NAME: fm-digitalguru-api-update-dlq-prod
+CRITICAL:__main__:📊 MESSAGE COUNT: 4
+CRITICAL:__main__:🌍 REGION: sa-east-1
+CRITICAL:__main__:🏢 ACCOUNT: 432817839790
+CRITICAL:__main__:🔗 QUEUE URL: https://sqs.sa-east-1.amazonaws.com/432817839790/fm-digitalguru-api-update-dlq-prod
+CRITICAL:__main__:⏰ TIMESTAMP: 2025-08-07T20:02:41.138881
+CRITICAL:__main__:================================================================================
+WARNING:dlq_monitor.notifiers.pr_audio:Audio notifications disabled - pygame not available
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:dlq_monitor.notifiers.pr_audio:Audio notifications disabled - pygame not available
+CRITICAL:__main__:🚨 CRITICAL DLQ ALERT 🚨
+CRITICAL:__main__:📋 QUEUE NAME: fm-digitalguru-api-update-dlq-prod
+CRITICAL:__main__:📊 MESSAGE COUNT: 4
+CRITICAL:__main__:🌍 REGION: sa-east-1
+CRITICAL:__main__:🏢 ACCOUNT: 432817839790
+CRITICAL:__main__:🔗 QUEUE URL: https://sqs.sa-east-1.amazonaws.com/432817839790/fm-digitalguru-api-update-dlq-prod
+CRITICAL:__main__:⏰ TIMESTAMP: 2025-08-07T20:07:50.198502
+CRITICAL:__main__:================================================================================
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:__main__:⚠️  DLQ fm-digitalguru-api-update-dlq-prod has 4 messages
+WARNING:__main__:Found 1 DLQ(s) with messages
+WARNING:dlq_monitor.notifiers.pr_audio:Audio notifications disabled - pygame not available

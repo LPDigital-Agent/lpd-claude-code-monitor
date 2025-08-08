@@ -1,8 +1,9 @@
 'use client'
 
-import { Database, RefreshCw, Search, ChevronDown } from 'lucide-react'
+import { Database, RefreshCw, Search, ChevronDown, CheckSquare, Square, AlertCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 interface Queue {
   id: string
@@ -38,15 +39,55 @@ async function fetchQueues(): Promise<Queue[]> {
     }))
 }
 
+async function triggerInvestigation(queueNames: string[]) {
+  const response = await fetch('/api/flask/api/investigate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ queues: queueNames })
+  })
+  if (!response.ok) throw new Error('Failed to trigger investigation')
+  return response.json()
+}
+
 export function AWSSQSMonitorPanel() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState('dlq')
   const [collapsed, setCollapsed] = useState(false)
+  const [selectedQueues, setSelectedQueues] = useState<Set<string>>(new Set())
+  const [investigating, setInvestigating] = useState<Set<string>>(new Set())
   
   const { data: queues = [], isLoading, refetch } = useQuery({
     queryKey: ['production-queues'],
     queryFn: fetchQueues,
     refetchInterval: 30000,
+  })
+  
+  // Fetch active investigations to show which queues are being investigated
+  const { data: activeInvestigations = [] } = useQuery({
+    queryKey: ['activeInvestigations'],
+    queryFn: async () => {
+      const response = await fetch('/api/flask/api/active-investigations')
+      if (!response.ok) return []
+      const data = await response.json()
+      return data.map((inv: any) => inv.dlq)
+    },
+    refetchInterval: 3000,
+  })
+
+  const investigateMutation = useMutation({
+    mutationFn: triggerInvestigation,
+    onMutate: (queueNames) => {
+      setInvestigating(new Set(queueNames))
+    },
+    onSuccess: (data, queueNames) => {
+      toast.success(`Investigation started for ${queueNames.length} queue(s)`)
+      setSelectedQueues(new Set())
+      setInvestigating(new Set())
+    },
+    onError: (error, queueNames) => {
+      toast.error('Failed to start investigation')
+      setInvestigating(new Set())
+    }
   })
 
   const filteredQueues = queues.filter(queue => {
@@ -59,9 +100,37 @@ export function AWSSQSMonitorPanel() {
     return true
   })
 
-  const handleInvestigate = async (queueId: string) => {
-    // Trigger investigation for selected queue
-    console.log('Investigating queue:', queueId)
+  const toggleQueueSelection = (queueId: string) => {
+    const newSelected = new Set(selectedQueues)
+    if (newSelected.has(queueId)) {
+      newSelected.delete(queueId)
+    } else {
+      newSelected.add(queueId)
+    }
+    setSelectedQueues(newSelected)
+  }
+
+  const selectAll = () => {
+    const allQueueIds = new Set(filteredQueues.map(q => q.id))
+    setSelectedQueues(allQueueIds)
+  }
+
+  const clearSelection = () => {
+    setSelectedQueues(new Set())
+  }
+
+  const handleInvestigateSelected = () => {
+    const queueNames = Array.from(selectedQueues).map(id => {
+      const queue = queues.find(q => q.id === id)
+      return queue?.name || id
+    })
+    if (queueNames.length > 0) {
+      investigateMutation.mutate(queueNames)
+    }
+  }
+
+  const handleInvestigateSingle = (queueId: string, queueName: string) => {
+    investigateMutation.mutate([queueName])
   }
 
   return (
@@ -85,15 +154,40 @@ export function AWSSQSMonitorPanel() {
             </div>
           </div>
           <div className="flex gap-2">
+            {selectedQueues.size > 0 && (
+              <div className="flex items-center gap-2 mr-2">
+                <span className="text-xs text-gray-400">
+                  {selectedQueues.size} selected
+                </span>
+                <button
+                  onClick={clearSelection}
+                  className="text-xs text-gray-400 hover:text-white transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
             <button 
               onClick={() => refetch()}
               className="p-1.5 rounded-md bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-white transition-all duration-200"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
-            <button className="px-3 py-1.5 rounded-md bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 transition-all duration-200 text-sm font-medium flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5" />
-              Investigate
+            <button 
+              onClick={handleInvestigateSelected}
+              disabled={selectedQueues.size === 0 || investigateMutation.isPending}
+              className={`px-3 py-1.5 rounded-md transition-all duration-200 text-sm font-medium flex items-center gap-1.5 ${
+                selectedQueues.size > 0 
+                  ? 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30' 
+                  : 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {investigateMutation.isPending ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Search className="w-3.5 h-3.5" />
+              )}
+              Investigate {selectedQueues.size > 0 && `(${selectedQueues.size})`}
             </button>
           </div>
         </div>
@@ -136,41 +230,117 @@ export function AWSSQSMonitorPanel() {
                 <p className="text-xs mt-1">Waiting for DLQ queues to appear</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredQueues.map((queue) => (
-                  <div
-                    key={queue.id}
-                    className={`p-3 rounded-lg border transition-all duration-200 hover:scale-[1.02] cursor-pointer ${
-                      queue.messages > 0 
-                        ? 'bg-red-900/20 border-red-500/30 hover:border-red-500/50' 
-                        : 'bg-gray-800/30 border-gray-700 hover:border-gray-600'
-                    }`}
-                    onClick={() => handleInvestigate(queue.id)}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="text-sm font-medium text-white truncate pr-2">
-                        {queue.name}
-                      </h4>
-                      {queue.isDLQ && (
-                        <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">
-                          DLQ
-                        </span>
-                      )}
+              <div className="space-y-2">
+                {/* Select All / Clear All Bar */}
+                {filteredQueues.length > 0 && (
+                  <div className="flex items-center justify-between px-2 py-1 bg-gray-800/30 rounded">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={selectAll}
+                        className="text-xs text-gray-400 hover:text-primary-400 transition-colors"
+                      >
+                        Select All
+                      </button>
+                      <span className="text-gray-600">|</span>
+                      <button
+                        onClick={clearSelection}
+                        className="text-xs text-gray-400 hover:text-primary-400 transition-colors"
+                      >
+                        Clear All
+                      </button>
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-500">Messages</span>
-                        <span className={queue.messages > 0 ? 'text-red-400 font-medium' : 'text-gray-400'}>
-                          {queue.messages}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-500">In Flight</span>
-                        <span className="text-gray-400">{queue.inFlight}</span>
-                      </div>
-                    </div>
+                    <span className="text-xs text-gray-500">
+                      {filteredQueues.length} queue{filteredQueues.length !== 1 ? 's' : ''} found
+                    </span>
                   </div>
-                ))}
+                )}
+                
+                {/* Queue Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {filteredQueues.map((queue) => {
+                    const isSelected = selectedQueues.has(queue.id)
+                    const isInvestigating = investigating.has(queue.name) || activeInvestigations.includes(queue.name)
+                    
+                    return (
+                      <div
+                        key={queue.id}
+                        className={`relative p-3 rounded-lg border transition-all duration-200 ${
+                          isInvestigating 
+                            ? 'bg-blue-900/20 border-blue-500/50 animate-pulse'
+                            : isSelected
+                            ? 'bg-primary-900/20 border-primary-500/50'
+                            : queue.messages > 0 
+                            ? 'bg-red-900/20 border-red-500/30 hover:border-red-500/50' 
+                            : 'bg-gray-800/30 border-gray-700 hover:border-gray-600'
+                        }`}
+                      >
+                        {/* Checkbox */}
+                        <div className="absolute top-2 left-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleQueueSelection(queue.id)
+                            }}
+                            className="p-1 hover:bg-gray-700/50 rounded transition-colors"
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-primary-400" />
+                            ) : (
+                              <Square className="w-4 h-4 text-gray-500" />
+                            )}
+                          </button>
+                        </div>
+                        
+                        {/* Content */}
+                        <div className="pl-8">
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="text-sm font-medium text-white truncate pr-2">
+                              {queue.name}
+                            </h4>
+                            {queue.isDLQ && (
+                              <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded">
+                                DLQ
+                              </span>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-500">Messages</span>
+                              <span className={queue.messages > 0 ? 'text-red-400 font-medium' : 'text-gray-400'}>
+                                {queue.messages}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-500">In Flight</span>
+                              <span className="text-gray-400">{queue.inFlight}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Individual Investigate Button */}
+                          {queue.messages > 0 && !isInvestigating && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleInvestigateSingle(queue.id, queue.name)
+                              }}
+                              className="mt-2 w-full px-2 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded text-xs font-medium flex items-center justify-center gap-1 transition-all"
+                            >
+                              <AlertCircle className="w-3 h-3" />
+                              Investigate Now
+                            </button>
+                          )}
+                          
+                          {isInvestigating && (
+                            <div className="mt-2 w-full px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-medium flex items-center justify-center gap-1">
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                              Investigating...
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </div>

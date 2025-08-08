@@ -1,0 +1,61 @@
+# DLQ Monitor Configuration - FABIO-PROD Edition
+# This configuration emphasizes queue names in all alerts and notifications
+
+# AWS Configuration - FABIO-PROD Profile
+aws_profile: "FABIO-PROD"
+region: "sa-east-1"
+account_id: "432817839790"  # Your AWS account ID
+
+# Monitoring Settings
+check_interval: 30  # seconds between checks
+notification_sound: true
+log_level: "INFO"
+cooldown_minutes: 5  # minutes between notifications for same queue
+
+# DLQ patterns to match (case-insensitive)
+# These patterns help identify Dead Letter Queues
+dlq_patterns:
+  - "-dlq"
+  - "-dead-letter"
+  - "-deadletter"
+  - "_dlq"
+  - "-dl"
+
+# Notification settings - Queue names will be prominently displayed
+notifications:
+  enabled: true
+  sound: true
+  include_queue_name_in_title: true  # Queue name appears in notification title
+  include_region_info: true          # Include region in notification
+  critical_threshold: 1              # Send notification when messages >= this number
+  speech_announcement: true          # Announce queue name via speech
+
+# Logging settings - Queue names emphasized in logs
+logging:
+  level: "INFO"
+  file: "dlq_monitor_FABIO-PROD_sa-east-1.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - [QUEUE: %(queue_name)s] - %(message)s"
+  emphasize_queue_names: true        # Highlight queue names in log output
+  
+# Alert formatting - How queue names appear in alerts
+alert_formatting:
+  queue_name_emphasis: "🚨 DLQ ALERT - {queue_name} 🚨"
+  include_metadata: true             # Include region, account, timestamp
+  console_colors: true               # Colored output in terminal
+
+# Investigation settings - Control how investigations are triggered
+investigation:
+  mode: "manual"                     # "manual" or "automatic" - controls investigation triggering
+  auto_threshold: 10                 # Only used if mode is "automatic" - messages threshold
+  cooldown_minutes: 30               # Minutes before same DLQ can be investigated again
+  manual_ui_only: true               # When true, investigations can only start from UI
+  
+# Demo settings (for testing without AWS)
+demo:
+  sample_queues:
+    - "payment-processing-dlq"
+    - "user-notification-deadletter"
+    - "order-fulfillment_dlq"
+    - "email-service-dead-letter"
+    - "crypto-transaction-dlq"
+  simulate_realistic_patterns: true

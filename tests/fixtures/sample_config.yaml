@@ -1,0 +1,35 @@
+# Sample configuration for testing
+aws:
+  profile: "test-profile"
+  region: "us-east-1"
+
+dlq_patterns:
+  - "*-dlq"
+  - "*-dead-letter*"
+  - "*-error-queue"
+
+notification:
+  threshold: 1
+  cooldown: 300
+  sound_enabled: true
+
+investigation:
+  enabled: true
+  auto_trigger: true
+  cooldown: 600
+  max_concurrent: 3
+
+demo_mode:
+  enabled: false
+  simulate_messages: false
+  message_count: 5
+
+monitoring:
+  interval: 30
+  max_investigations: 3
+  log_level: "INFO"
+
+github:
+  enabled: true
+  auto_pr: true
+  repository: "test/test-repo"

@@ -2,6 +2,7 @@
 
 import { Users, RefreshCw, Plus, Activity, Clock, CheckCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 interface Agent {
   id: string
@@ -13,13 +14,20 @@ interface Agent {
   messagesProcessed: number
 }
 
-export function LiveAgentPanel() {
-  const [agents, setAgents] = useState<Agent[]>([])
+const fetchActiveInvestigations = async (): Promise<Agent[]> => {
+  const response = await fetch('/api/flask/api/active-investigations')
+  if (!response.ok) {
+    throw new Error('Failed to fetch active investigations')
+  }
+  return response.json()
+}
 
-  useEffect(() => {
-    // Will be connected to WebSocket
-    setAgents([])
-  }, [])
+export function LiveAgentPanel() {
+  const { data: agents = [], refetch } = useQuery<Agent[]>({
+    queryKey: ['activeInvestigations'],
+    queryFn: fetchActiveInvestigations,
+    refetchInterval: 3000, // Poll every 3 seconds
+  })
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -52,7 +60,10 @@ export function LiveAgentPanel() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button className="p-1.5 rounded-md bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-white transition-all duration-200">
+            <button 
+              onClick={() => refetch()}
+              className="p-1.5 rounded-md bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-white transition-all duration-200"
+            >
               <RefreshCw className="w-4 h-4" />
             </button>
             <button className="p-1.5 rounded-md bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 transition-all duration-200">

@@ -16,9 +16,13 @@ export async function GET() {
     return NextResponse.json(data)
   } catch (error) {
     console.error('Error fetching from Flask API:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch data from Flask API' },
-      { status: 500 }
-    )
+    
+    // Return empty data structure when backend is not available
+    // This allows the UI to render without crashing
+    return NextResponse.json({
+      dlqs: [],
+      timestamp: new Date().toISOString(),
+      error: 'Backend service unavailable'
+    })
   }
 }
