@@ -88,19 +88,25 @@ def trigger_investigation(queue_name):
     # This makes Claude print the response and exit instead of starting interactive mode
     cmd = ['claude', '--print', claude_prompt]
 
+    # Log file for debugging (optional)
+    log_file = Path(f"/tmp/claude_investigation_{queue_name}_{subprocess.os.getpid()}.log")
+
     try:
         # Start process in background without blocking
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-            text=True
-        )
+        # Redirect output to log file for debugging
+        with open(log_file, 'w') as log_out:
+            process = subprocess.Popen(
+                cmd,
+                stdout=log_out,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                text=True
+            )
 
         print(f"✅ Claude investigation started with PID: {process.pid}")
         print(f"📝 Queue: {queue_name}")
         print("🚀 Investigation running in background")
+        print(f"📄 Output log: {log_file}")
         print("💡 Check Claude Code UI for progress")
 
         # Don't wait or ask for input - just return success
