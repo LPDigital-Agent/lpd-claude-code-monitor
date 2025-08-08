@@ -22,3 +22,251 @@
 [2025-08-08 13:32:03 -0400] [18953] [INFO] Booting worker with pid: 18953
 [2025-08-08 13:32:03 -0400] [18954] [INFO] Booting worker with pid: 18954
 [2025-08-08 13:32:03 -0400] [18955] [INFO] Booting worker with pid: 18955
+[2025-08-08 13:33:28 -0400] [18781] [INFO] Handling signal: term
+[2025-08-08 13:33:28 -0400] [18917] [INFO] Worker exiting (pid: 18917)
+[2025-08-08 13:33:28 -0400] [18873] [INFO] Worker exiting (pid: 18873)
+[2025-08-08 13:33:28 -0400] [18953] [INFO] Worker exiting (pid: 18953)
+[2025-08-08 13:33:28 -0400] [18871] [INFO] Worker exiting (pid: 18871)
+[2025-08-08 13:33:28 -0400] [18876] [INFO] Worker exiting (pid: 18876)
+[2025-08-08 13:33:28 -0400] [18877] [INFO] Worker exiting (pid: 18877)
+[2025-08-08 13:33:28 -0400] [18869] [INFO] Worker exiting (pid: 18869)
+[2025-08-08 13:33:28 -0400] [18916] [INFO] Worker exiting (pid: 18916)
+[2025-08-08 13:33:28 -0400] [18952] [INFO] Worker exiting (pid: 18952)
+[2025-08-08 13:33:28 -0400] [18955] [INFO] Worker exiting (pid: 18955)
+[2025-08-08 13:33:28 -0400] [18919] [INFO] Worker exiting (pid: 18919)
+[2025-08-08 13:33:28 -0400] [18870] [INFO] Worker exiting (pid: 18870)
+[2025-08-08 13:33:28 -0400] [18872] [INFO] Worker exiting (pid: 18872)
+[2025-08-08 13:33:28 -0400] [18875] [INFO] Worker exiting (pid: 18875)
+[2025-08-08 13:33:28 -0400] [18954] [INFO] Worker exiting (pid: 18954)
+[2025-08-08 13:33:28 -0400] [18874] [INFO] Worker exiting (pid: 18874)
+[2025-08-08 13:33:28 -0400] [18913] [INFO] Worker exiting (pid: 18913)
+[2025-08-08 13:33:28 -0400] [18915] [INFO] Worker exiting (pid: 18915)
+[2025-08-08 13:33:28 -0400] [18918] [INFO] Worker exiting (pid: 18918)
+[2025-08-08 13:33:28 -0400] [18914] [INFO] Worker exiting (pid: 18914)
+[2025-08-08 13:33:28 -0400] [18912] [INFO] Worker exiting (pid: 18912)
+[2025-08-08 13:33:29 -0400] [18781] [INFO] Shutting down: Master
+[2025-08-08 13:33:30 -0400] [25461] [INFO] Starting gunicorn 23.0.0
+[2025-08-08 13:33:30 -0400] [25461] [INFO] Listening at: http://0.0.0.0:5002 (25461)
+[2025-08-08 13:33:30 -0400] [25461] [INFO] Using worker: sync
+[2025-08-08 13:33:30 -0400] [25542] [INFO] Booting worker with pid: 25542
+[2025-08-08 13:33:30 -0400] [25545] [INFO] Booting worker with pid: 25545
+[2025-08-08 13:33:30 -0400] [25591] [INFO] Booting worker with pid: 25591
+[2025-08-08 13:33:30 -0400] [25619] [INFO] Booting worker with pid: 25619
+[2025-08-08 13:33:30 -0400] [25634] [INFO] Booting worker with pid: 25634
+[2025-08-08 13:33:30 -0400] [25635] [INFO] Booting worker with pid: 25635
+[2025-08-08 13:33:30 -0400] [25689] [INFO] Booting worker with pid: 25689
+[2025-08-08 13:33:30 -0400] [25690] [INFO] Booting worker with pid: 25690
+[2025-08-08 13:33:30 -0400] [25691] [INFO] Booting worker with pid: 25691
+[2025-08-08 13:33:30 -0400] [25692] [INFO] Booting worker with pid: 25692
+[2025-08-08 13:33:31 -0400] [25693] [INFO] Booting worker with pid: 25693
+[2025-08-08 13:33:31 -0400] [25694] [INFO] Booting worker with pid: 25694
+[2025-08-08 13:33:31 -0400] [25695] [INFO] Booting worker with pid: 25695
+[2025-08-08 13:33:31 -0400] [25696] [INFO] Booting worker with pid: 25696
+[2025-08-08 13:33:31 -0400] [25697] [INFO] Booting worker with pid: 25697
+[2025-08-08 13:33:31 -0400] [25698] [INFO] Booting worker with pid: 25698
+[2025-08-08 13:33:31 -0400] [25699] [INFO] Booting worker with pid: 25699
+[2025-08-08 13:33:31 -0400] [25700] [INFO] Booting worker with pid: 25700
+[2025-08-08 13:33:31 -0400] [25701] [INFO] Booting worker with pid: 25701
+[2025-08-08 13:33:31 -0400] [25715] [INFO] Booting worker with pid: 25715
+[2025-08-08 13:33:31 -0400] [25729] [INFO] Booting worker with pid: 25729
+[2025-08-08 13:34:47 -0400] [25461] [INFO] Handling signal: term
+[2025-08-08 13:34:47 -0400] [25698] [INFO] Worker exiting (pid: 25698)
+[2025-08-08 13:34:47 -0400] [25700] [INFO] Worker exiting (pid: 25700)
+[2025-08-08 13:34:47 -0400] [25701] [INFO] Worker exiting (pid: 25701)
+[2025-08-08 13:34:47 -0400] [25690] [INFO] Worker exiting (pid: 25690)
+[2025-08-08 13:34:47 -0400] [25696] [INFO] Worker exiting (pid: 25696)
+[2025-08-08 13:34:47 -0400] [25697] [INFO] Worker exiting (pid: 25697)
+[2025-08-08 13:34:47 -0400] [25694] [INFO] Worker exiting (pid: 25694)
+[2025-08-08 13:34:47 -0400] [25695] [INFO] Worker exiting (pid: 25695)
+[2025-08-08 13:34:47 -0400] [25692] [INFO] Worker exiting (pid: 25692)
+[2025-08-08 13:34:47 -0400] [25545] [INFO] Worker exiting (pid: 25545)
+[2025-08-08 13:34:47 -0400] [25729] [INFO] Worker exiting (pid: 25729)
+[2025-08-08 13:34:47 -0400] [25693] [INFO] Worker exiting (pid: 25693)
+[2025-08-08 13:34:47 -0400] [25542] [INFO] Worker exiting (pid: 25542)
+[2025-08-08 13:34:47 -0400] [25619] [INFO] Worker exiting (pid: 25619)
+[2025-08-08 13:34:47 -0400] [25715] [INFO] Worker exiting (pid: 25715)
+[2025-08-08 13:34:47 -0400] [25691] [INFO] Worker exiting (pid: 25691)
+[2025-08-08 13:34:47 -0400] [25635] [INFO] Worker exiting (pid: 25635)
+[2025-08-08 13:34:47 -0400] [25591] [INFO] Worker exiting (pid: 25591)
+[2025-08-08 13:34:47 -0400] [25699] [INFO] Worker exiting (pid: 25699)
+[2025-08-08 13:34:47 -0400] [25634] [INFO] Worker exiting (pid: 25634)
+[2025-08-08 13:34:47 -0400] [25689] [INFO] Worker exiting (pid: 25689)
+[2025-08-08 13:34:49 -0400] [25461] [INFO] Shutting down: Master
+[2025-08-08 13:34:50 -0400] [31318] [DEBUG] Current configuration:
+  config: gunicorn_config.py
+  wsgi_app: None
+  bind: ['0.0.0.0:5002']
+  backlog: 2048
+  workers: 21
+  worker_class: sync
+  threads: 1
+  worker_connections: 1000
+  max_requests: 1000
+  max_requests_jitter: 50
+  timeout: 120
+  graceful_timeout: 30
+  keepalive: 2
+  limit_request_line: 4094
+  limit_request_fields: 100
+  limit_request_field_size: 8190
+  reload: False
+  reload_engine: auto
+  reload_extra_files: []
+  spew: False
+  check_config: False
+  print_config: False
+  preload_app: False
+  sendfile: None
+  reuse_port: False
+  chdir: /Users/fabio.santos/LPD Repos/lpd-claude-code-monitor
+  daemon: False
+  raw_env: []
+  pidfile: .pids/neurocenter_backend_gunicorn.pid
+  worker_tmp_dir: None
+  user: 501
+  group: 20
+  umask: 0
+  initgroups: False
+  tmp_upload_dir: None
+  secure_scheme_headers: {'X-FORWARDED-PROTOCOL': 'ssl', 'X-FORWARDED-PROTO': 'https', 'X-FORWARDED-SSL': 'on'}
+  forwarded_allow_ips: ['127.0.0.1', '::1']
+  accesslog: logs/gunicorn_access.log
+  disable_redirect_access_to_syslog: False
+  access_log_format: %(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s
+  errorlog: logs/gunicorn_error.log
+  loglevel: debug
+  capture_output: False
+  logger_class: gunicorn.glogging.Logger
+  logconfig: None
+  logconfig_dict: {}
+  logconfig_json: None
+  syslog_addr: unix:///var/run/syslog
+  syslog: False
+  syslog_prefix: None
+  syslog_facility: user
+  enable_stdio_inheritance: False
+  statsd_host: None
+  dogstatsd_tags: 
+  statsd_prefix: 
+  proc_name: lpd-neurocenter-backend
+  default_proc_name: dlq_monitor.web.app:app
+  pythonpath: None
+  paste: None
+  on_starting: <function OnStarting.on_starting at 0x104ac7420>
+  on_reload: <function OnReload.on_reload at 0x104ac7560>
+  when_ready: <function WhenReady.when_ready at 0x104ac76a0>
+  pre_fork: <function Prefork.pre_fork at 0x104ac77e0>
+  post_fork: <function Postfork.post_fork at 0x104ac7920>
+  post_worker_init: <function PostWorkerInit.post_worker_init at 0x104ac7a60>
+  worker_int: <function WorkerInt.worker_int at 0x104ac7ba0>
+  worker_abort: <function WorkerAbort.worker_abort at 0x104ac7ce0>
+  pre_exec: <function PreExec.pre_exec at 0x104ac7e20>
+  pre_request: <function PreRequest.pre_request at 0x104ac7f60>
+  post_request: <function PostRequest.post_request at 0x104aec040>
+  child_exit: <function ChildExit.child_exit at 0x104aec180>
+  worker_exit: <function WorkerExit.worker_exit at 0x104aec2c0>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x104aec400>
+  on_exit: <function OnExit.on_exit at 0x104aec540>
+  ssl_context: <function NewSSLContext.ssl_context at 0x104aec720>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1', '::1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  permit_obsolete_folding: False
+  strip_header_spaces: False
+  permit_unconventional_http_method: False
+  permit_unconventional_http_version: False
+  casefold_http_method: False
+  forwarder_headers: ['SCRIPT_NAME', 'PATH_INFO']
+  header_map: drop
+[2025-08-08 13:34:50 -0400] [31318] [INFO] Starting gunicorn 23.0.0
+[2025-08-08 13:34:50 -0400] [31318] [DEBUG] Arbiter booted
+[2025-08-08 13:34:50 -0400] [31318] [INFO] Listening at: http://0.0.0.0:5002 (31318)
+[2025-08-08 13:34:50 -0400] [31318] [INFO] Using worker: sync
+[2025-08-08 13:34:50 -0400] [31424] [INFO] Booting worker with pid: 31424
+[2025-08-08 13:34:50 -0400] [31425] [INFO] Booting worker with pid: 31425
+[2025-08-08 13:34:50 -0400] [31426] [INFO] Booting worker with pid: 31426
+[2025-08-08 13:34:50 -0400] [31427] [INFO] Booting worker with pid: 31427
+[2025-08-08 13:34:50 -0400] [31428] [INFO] Booting worker with pid: 31428
+[2025-08-08 13:34:50 -0400] [31429] [INFO] Booting worker with pid: 31429
+[2025-08-08 13:34:50 -0400] [31442] [INFO] Booting worker with pid: 31442
+[2025-08-08 13:34:50 -0400] [31443] [INFO] Booting worker with pid: 31443
+[2025-08-08 13:34:50 -0400] [31457] [INFO] Booting worker with pid: 31457
+[2025-08-08 13:34:50 -0400] [31497] [INFO] Booting worker with pid: 31497
+[2025-08-08 13:34:50 -0400] [31498] [INFO] Booting worker with pid: 31498
+[2025-08-08 13:34:50 -0400] [31499] [INFO] Booting worker with pid: 31499
+[2025-08-08 13:34:50 -0400] [31500] [INFO] Booting worker with pid: 31500
+[2025-08-08 13:34:50 -0400] [31501] [INFO] Booting worker with pid: 31501
+[2025-08-08 13:34:50 -0400] [31502] [INFO] Booting worker with pid: 31502
+[2025-08-08 13:34:50 -0400] [31507] [INFO] Booting worker with pid: 31507
+[2025-08-08 13:34:50 -0400] [31508] [INFO] Booting worker with pid: 31508
+[2025-08-08 13:34:50 -0400] [31509] [INFO] Booting worker with pid: 31509
+[2025-08-08 13:34:51 -0400] [31510] [INFO] Booting worker with pid: 31510
+[2025-08-08 13:34:51 -0400] [31511] [INFO] Booting worker with pid: 31511
+[2025-08-08 13:34:51 -0400] [31318] [DEBUG] 21 workers
+[2025-08-08 13:34:51 -0400] [31512] [INFO] Booting worker with pid: 31512
+[2025-08-08 13:36:38 -0400] [31511] [DEBUG] GET /api/active-investigations
+[2025-08-08 13:37:53 -0400] [31318] [INFO] Handling signal: term
+[2025-08-08 13:37:53 -0400] [31442] [INFO] Worker exiting (pid: 31442)
+[2025-08-08 13:37:53 -0400] [31443] [INFO] Worker exiting (pid: 31443)
+[2025-08-08 13:37:53 -0400] [31500] [INFO] Worker exiting (pid: 31500)
+[2025-08-08 13:37:53 -0400] [31457] [INFO] Worker exiting (pid: 31457)
+[2025-08-08 13:37:53 -0400] [31426] [INFO] Worker exiting (pid: 31426)
+[2025-08-08 13:37:53 -0400] [31497] [INFO] Worker exiting (pid: 31497)
+[2025-08-08 13:37:53 -0400] [31428] [INFO] Worker exiting (pid: 31428)
+[2025-08-08 13:37:53 -0400] [31508] [INFO] Worker exiting (pid: 31508)
+[2025-08-08 13:37:53 -0400] [31424] [INFO] Worker exiting (pid: 31424)
+[2025-08-08 13:37:53 -0400] [31507] [INFO] Worker exiting (pid: 31507)
+[2025-08-08 13:37:53 -0400] [31499] [INFO] Worker exiting (pid: 31499)
+[2025-08-08 13:37:53 -0400] [31425] [INFO] Worker exiting (pid: 31425)
+[2025-08-08 13:37:53 -0400] [31427] [INFO] Worker exiting (pid: 31427)
+[2025-08-08 13:37:53 -0400] [31502] [INFO] Worker exiting (pid: 31502)
+[2025-08-08 13:37:53 -0400] [31509] [INFO] Worker exiting (pid: 31509)
+[2025-08-08 13:37:53 -0400] [31510] [INFO] Worker exiting (pid: 31510)
+[2025-08-08 13:37:53 -0400] [31512] [INFO] Worker exiting (pid: 31512)
+[2025-08-08 13:37:53 -0400] [31511] [INFO] Worker exiting (pid: 31511)
+[2025-08-08 13:37:53 -0400] [31429] [INFO] Worker exiting (pid: 31429)
+[2025-08-08 13:37:53 -0400] [31498] [INFO] Worker exiting (pid: 31498)
+[2025-08-08 13:37:53 -0400] [31501] [INFO] Worker exiting (pid: 31501)
+[2025-08-08 13:37:53 -0400] [31318] [ERROR] Worker (pid:31509) was sent SIGTERM!
+[2025-08-08 13:37:53 -0400] [31318] [ERROR] Worker (pid:31443) was sent SIGTERM!
+[2025-08-08 13:37:53 -0400] [31318] [ERROR] Worker (pid:31499) was sent SIGTERM!
+[2025-08-08 13:37:53 -0400] [31318] [ERROR] Worker (pid:31502) was sent SIGTERM!
+[2025-08-08 13:37:53 -0400] [31318] [ERROR] Worker (pid:31508) was sent SIGTERM!
+[2025-08-08 13:37:53 -0400] [31318] [ERROR] Worker (pid:31457) was sent SIGTERM!
+[2025-08-08 13:37:53 -0400] [31318] [ERROR] Worker (pid:31501) was sent SIGTERM!
+[2025-08-08 13:37:53 -0400] [31318] [ERROR] Worker (pid:31497) was sent SIGTERM!
+[2025-08-08 13:37:53 -0400] [31318] [ERROR] Worker (pid:31500) was sent SIGTERM!
+[2025-08-08 13:37:53 -0400] [31318] [ERROR] Worker (pid:31498) was sent SIGTERM!
+[2025-08-08 13:37:53 -0400] [31318] [INFO] Shutting down: Master
+[2025-08-08 13:37:54 -0400] [45160] [INFO] Starting gunicorn 23.0.0
+[2025-08-08 13:37:54 -0400] [45160] [INFO] Listening at: http://0.0.0.0:5002 (45160)
+[2025-08-08 13:37:54 -0400] [45160] [INFO] Using worker: sync
+[2025-08-08 13:37:54 -0400] [45162] [INFO] Booting worker with pid: 45162
+[2025-08-08 13:37:54 -0400] [45163] [INFO] Booting worker with pid: 45163
+[2025-08-08 13:37:54 -0400] [45164] [INFO] Booting worker with pid: 45164
+[2025-08-08 13:37:54 -0400] [45165] [INFO] Booting worker with pid: 45165
+[2025-08-08 13:39:01 -0400] [45160] [INFO] Handling signal: term
+[2025-08-08 13:39:01 -0400] [45164] [INFO] Worker exiting (pid: 45164)
+[2025-08-08 13:39:01 -0400] [45163] [INFO] Worker exiting (pid: 45163)
+[2025-08-08 13:39:01 -0400] [45165] [INFO] Worker exiting (pid: 45165)
+[2025-08-08 13:39:01 -0400] [45162] [INFO] Worker exiting (pid: 45162)
+[2025-08-08 13:39:01 -0400] [45160] [ERROR] Worker (pid:45165) was sent SIGTERM!
+[2025-08-08 13:39:01 -0400] [45160] [ERROR] Worker (pid:45164) was sent SIGTERM!
+[2025-08-08 13:39:01 -0400] [45160] [ERROR] Worker (pid:45163) was sent SIGTERM!
+[2025-08-08 13:39:01 -0400] [45160] [ERROR] Worker (pid:45162) was sent SIGTERM!
+[2025-08-08 13:39:01 -0400] [45160] [INFO] Shutting down: Master
+[2025-08-08 13:39:03 -0400] [50437] [INFO] Starting gunicorn 23.0.0
+[2025-08-08 13:39:03 -0400] [50437] [INFO] Listening at: http://0.0.0.0:5002 (50437)
+[2025-08-08 13:39:03 -0400] [50437] [INFO] Using worker: sync
+[2025-08-08 13:39:03 -0400] [50438] [INFO] Booting worker with pid: 50438
+[2025-08-08 13:39:03 -0400] [50439] [INFO] Booting worker with pid: 50439
+[2025-08-08 13:39:03 -0400] [50440] [INFO] Booting worker with pid: 50440
+[2025-08-08 13:39:03 -0400] [50441] [INFO] Booting worker with pid: 50441

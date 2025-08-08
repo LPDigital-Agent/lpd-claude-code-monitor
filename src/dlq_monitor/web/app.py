@@ -328,10 +328,16 @@ class InvestigationTracker:
 
     def load_sessions(self) -> Dict[str, Any]:
         """Load active Claude sessions"""
+        # Always use absolute path to ensure we read the right file
+        session_path = os.path.join(os.path.dirname(__file__), "../../../.claude_sessions.json")
         try:
-            if os.path.exists(self.session_file):
-                with open(self.session_file) as f:
-                    return json.load(f)
+            if os.path.exists(session_path):
+                with open(session_path) as f:
+                    data = json.load(f)
+                    logger.info(f"Loaded {len(data)} sessions from {session_path}")
+                    return data
+            else:
+                logger.info(f"Session file not found at {session_path}")
         except Exception as e:
             logger.error(f"Error loading sessions: {e}")
         return {}
@@ -562,6 +568,41 @@ def voice_settings():
 def get_investigations():
     """Get active investigations"""
     return jsonify(investigation_tracker.get_active_investigations())
+
+
+@app.route("/api/test-investigations")
+def test_investigations():
+    """Test endpoint to debug investigation loading"""
+    import os
+
+    result = {
+        "cwd": os.getcwd(),
+        "session_file_exists": os.path.exists(".claude_sessions.json"),
+        "sessions": {},
+        "active": [],
+    }
+
+    try:
+        with open(".claude_sessions.json", "r") as f:
+            sessions = json.load(f)
+            result["sessions"] = sessions
+            result["active"] = [
+                {
+                    "id": sid,
+                    "name": f"Agent-{sid[-4:]}",
+                    "dlq": data.get("dlq_name") or data.get("queue", "Unknown"),
+                    "status": "active",
+                    "progress": 30,
+                    "duration": "0m 0s",
+                    "messagesProcessed": 5,
+                }
+                for sid, data in sessions.items()
+                if data.get("status") == "active"
+            ]
+    except Exception as e:
+        result["error"] = str(e)
+
+    return jsonify(result)
 
 
 @app.route("/api/investigations/start", methods=["POST"])
@@ -953,90 +994,67 @@ def get_agent_activities():
 def get_active_investigations():
     """Get all active investigations from both memory and file storage"""
     try:
-        import psutil
-
-        if not hasattr(app, "active_investigations"):
-            app.active_investigations = {}
-
-        # First, get investigations from file storage (.claude_sessions.json)
-        file_investigations = investigation_tracker.get_active_investigations()
-
-        # Merge file-based investigations with in-memory ones
-        all_investigations = {}
-
-        # Add file-based investigations
-        for file_inv in file_investigations:
-            inv_id = file_inv["id"]
-            all_investigations[inv_id] = {
-                "queue": file_inv["dlq"],
-                "pid": file_inv["pid"],
-                "status": "active",
-                "start_time": file_inv["startTime"],
-                "messages_processed": 5,
-                "progress": 30,  # Default progress for file-based
-            }
-
-        # Add/update with in-memory investigations (these take precedence)
-        for inv_id, inv_data in app.active_investigations.items():
-            all_investigations[inv_id] = inv_data
-
-        # Update investigation status based on process status
-        for inv_id, inv_data in list(all_investigations.items()):
-            try:
-                # Check if process is still running
-                if psutil.pid_exists(inv_data["pid"]):
-                    proc = psutil.Process(inv_data["pid"])
-                    if proc.status() == psutil.STATUS_ZOMBIE:
-                        inv_data["status"] = "completed"
-                        inv_data["progress"] = 100
-                    else:
-                        # Simulate progress (in real scenario, read from logs or status file)
-                        if inv_data.get("progress", 0) < 90:
-                            inv_data["progress"] = min(inv_data.get("progress", 0) + 10, 90)
-                            inv_data["messages_processed"] = inv_data.get("messages_processed", 0) + 1
-                else:
-                    # Process no longer exists
-                    inv_data["status"] = "completed"
-                    inv_data["progress"] = 100
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                # For mock PIDs or inaccessible processes, keep as active
-                if inv_data["pid"] == 99999:  # Mock PID
-                    inv_data["status"] = "active"
-                else:
-                    inv_data["status"] = "completed"
-                    inv_data["progress"] = 100
-
-        # Convert to list format for frontend
+        # Simple direct file reading approach that works
         active_agents = []
-        for inv_id, inv_data in all_investigations.items():
-            if inv_data.get("status", "active") in ["active", "running"]:
-                # Calculate duration
-                try:
-                    if isinstance(inv_data["start_time"], str):
-                        # Handle both ISO format and simpler format
-                        if "T" in inv_data["start_time"]:
-                            start_time = datetime.fromisoformat(inv_data["start_time"].replace("Z", "+00:00"))
-                        else:
-                            start_time = datetime.strptime(inv_data["start_time"], "%Y-%m-%d %H:%M:%S")
-                    else:
-                        start_time = inv_data["start_time"]
 
-                    duration = datetime.now() - start_time
-                    duration_str = f"{int(duration.total_seconds() // 60)}m {int(duration.total_seconds() % 60)}s"
-                except:
-                    duration_str = "0m 0s"
+        # Read from .claude_sessions.json directly
+        try:
+            with open(".claude_sessions.json", "r") as f:
+                sessions = json.load(f)
 
-                active_agents.append(
-                    {
-                        "id": inv_id,
-                        "name": f"Agent-{inv_id[-4:]}",
-                        "dlq": inv_data.get("queue", "Unknown"),
-                        "status": "active",
-                        "progress": inv_data.get("progress", 0),
-                        "duration": duration_str,
-                        "messagesProcessed": inv_data.get("messages_processed", 0),
-                    }
-                )
+                for sid, data in sessions.items():
+                    if data.get("status") == "active":
+                        # Calculate duration
+                        try:
+                            start_time = datetime.fromisoformat(data["start_time"].replace("Z", "+00:00"))
+                            duration = datetime.now() - start_time
+                            duration_str = (
+                                f"{int(duration.total_seconds() // 60)}m {int(duration.total_seconds() % 60)}s"
+                            )
+                        except:
+                            duration_str = "0m 0s"
+
+                        active_agents.append(
+                            {
+                                "id": sid,
+                                "name": f"Agent-{sid[-4:]}",
+                                "dlq": data.get("dlq_name") or data.get("queue", "Unknown"),
+                                "status": "active",
+                                "progress": 30,  # Default progress
+                                "duration": duration_str,
+                                "messagesProcessed": 5,
+                            }
+                        )
+        except FileNotFoundError:
+            pass  # No sessions file yet
+        except Exception as e:
+            logger.error(f"Error reading sessions file: {e}")
+
+        # Also check in-memory investigations if any
+        if hasattr(app, "active_investigations"):
+            for inv_id, inv_data in app.active_investigations.items():
+                if inv_data.get("status") == "active":
+                    # Calculate duration
+                    try:
+                        start_time = datetime.fromisoformat(inv_data["start_time"])
+                        duration = datetime.now() - start_time
+                        duration_str = f"{int(duration.total_seconds() // 60)}m {int(duration.total_seconds() % 60)}s"
+                    except:
+                        duration_str = "0m 0s"
+
+                    # Check if not already in list (avoid duplicates)
+                    if not any(a["id"] == inv_id for a in active_agents):
+                        active_agents.append(
+                            {
+                                "id": inv_id,
+                                "name": f"Agent-{inv_id[-4:]}",
+                                "dlq": inv_data.get("queue", "Unknown"),
+                                "status": "active",
+                                "progress": inv_data.get("progress", 0),
+                                "duration": duration_str,
+                                "messagesProcessed": inv_data.get("messages_processed", 0),
+                            }
+                        )
 
         return jsonify(active_agents)
     except Exception as e:
