@@ -43,6 +43,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: System :: Monitoring",
     "Topic :: System :: Systems Administration",
 ]
@@ -99,7 +100,7 @@ dlq-setup = "dlq_monitor.utils.github_setup:main"
 # Black code formatter
 [tool.black]
 line-length = 88
-target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312', 'py313']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -120,7 +121,7 @@ extend-exclude = '''
 
 # Ruff linter
 [tool.ruff]
-target-version = "py38"
+target-version = "py313"
 line-length = 88
 select = [
     "E",  # pycodestyle errors
@@ -142,7 +143,7 @@ ignore = [
 
 # MyPy type checker
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

@@ -16,14 +16,22 @@ AWS SQS Dead Letter Queue (DLQ) monitoring system with Claude AI auto-investigat
 ## Build and Development Commands
 
 ### Setup
+
+**Python Version Support**: This project supports Python 3.8 through 3.13. Python 3.13 is fully tested and supported.
+
 ```bash
 # Create virtual environment and install dependencies
 make dev              # Full dev setup with pre-commit hooks
 make install          # Production dependencies only
 
-# Manual setup
+# Manual setup (Python 3.8 - 3.13 supported)
 python3 -m venv venv
 source venv/bin/activate
+pip install -r requirements.txt
+
+# Python 3.13 specific setup (recommended)
+python3.13 -m venv venv-313
+source venv-313/bin/activate
 pip install -r requirements.txt
 
 # Web dashboard setup
@@ -201,13 +209,22 @@ The system spawns Claude Code CLI as a subprocess:
 ## Known Issues
 
 ### Blake2 Hash Warnings
-- Python 3.11 shows Blake2 hash warnings - these are harmless and don't affect functionality
+- Python 3.11+ may show Blake2 hash warnings - these are harmless and don't affect functionality
 - Can be safely ignored
+- Fixed in Python 3.13 installations via Homebrew
 
 ### Package Names
 - **Correct**: `pip install google-adk` (Google ADK framework)
 - **Wrong**: `pip install google-genai-developer-toolkit` (doesn't exist)
 - Also need: `pip install google-generativeai` (for Gemini API)
+
+### Python 3.13 Migration Status
+- ✅ **Complete**: Python 3.13 support added and fully tested
+- ✅ **Dependencies**: All core dependencies compatible with Python 3.13
+- ✅ **Tools**: Linting (ruff), formatting (black), type checking (mypy) all working
+- ✅ **Core Functionality**: CLI, monitoring, web dashboard, AWS SDK all tested
+- ⚠️ **Moto Testing**: Updated to use `mock_aws` instead of `mock_sqs` for Python 3.13 compatibility
+- 📋 **Virtual Environment**: Use `venv-313` for Python 3.13 development
 
 ## Development Workflow
 

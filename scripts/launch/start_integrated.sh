@@ -150,15 +150,22 @@ start_all() {
     export PYTHONWARNINGS="ignore"
     export PYTHONPATH="${PROJECT_ROOT}/src:${PROJECT_ROOT}"
     
-    # Fix SSL certificates for AWS SDK
-    export AWS_CA_BUNDLE='/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/site-packages/certifi/cacert.pem'
-    export REQUESTS_CA_BUNDLE='/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/site-packages/certifi/cacert.pem'
-    
-    # Check for virtual environment (optional - use system Python if not found)
-    if [ -d "venv" ]; then
+    # Check for Python 3.13 virtual environment first, then fallback to regular venv
+    if [ -d "venv-313" ]; then
+        source venv-313/bin/activate 2>/dev/null && print_color "$GREEN" "  ✓ Python 3.13 virtual environment activated"
+        # Fix SSL certificates for AWS SDK - Python 3.13
+        export AWS_CA_BUNDLE="${PROJECT_ROOT}/venv-313/lib/python3.13/site-packages/certifi/cacert.pem"
+        export REQUESTS_CA_BUNDLE="${PROJECT_ROOT}/venv-313/lib/python3.13/site-packages/certifi/cacert.pem"
+    elif [ -d "venv" ]; then
         source venv/bin/activate 2>/dev/null && print_color "$GREEN" "  ✓ Virtual environment activated"
+        # Fix SSL certificates for AWS SDK - fallback
+        export AWS_CA_BUNDLE='/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/site-packages/certifi/cacert.pem'
+        export REQUESTS_CA_BUNDLE='/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/site-packages/certifi/cacert.pem'
     else
         print_color "$YELLOW" "  ⚠ Using system Python (virtual environment not found)"
+        # Fix SSL certificates for AWS SDK - system Python
+        export AWS_CA_BUNDLE='/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/site-packages/certifi/cacert.pem'
+        export REQUESTS_CA_BUNDLE='/Users/fabio.santos/.pyenv/versions/3.11.10/lib/python3.11/site-packages/certifi/cacert.pem'
     fi
     
     # Install dependencies silently

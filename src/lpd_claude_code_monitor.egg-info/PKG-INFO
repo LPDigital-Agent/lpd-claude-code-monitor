@@ -2,8 +2,6 @@ Metadata-Version: 2.4
 Name: lpd-claude-code-monitor
 Version: 1.0.0
 Summary: AWS SQS Dead Letter Queue Monitor with Claude AI auto-investigation capabilities
-Home-page: https://github.com/fabiosantos/lpd-claude-code-monitor
-Author: Fabio Santos
 Author-email: Fabio Santos <fabio.santos@example.com>
 License: MIT License
         
@@ -43,6 +41,7 @@ Classifier: Programming Language :: Python :: 3.9
 Classifier: Programming Language :: Python :: 3.10
 Classifier: Programming Language :: Python :: 3.11
 Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
 Classifier: Topic :: System :: Monitoring
 Classifier: Topic :: System :: Systems Administration
 Requires-Python: >=3.8
@@ -73,9 +72,9 @@ Requires-Dist: pytest-asyncio>=0.21; extra == "test"
 Requires-Dist: moto>=4.2; extra == "test"
 Dynamic: license-file
 
-# 🚀 LPD Claude Code Monitor
+# 🐝 BHiveQ Observability Hub - LPD Digital Hive
 
-> Advanced DLQ monitoring system with Claude AI auto-investigation, PR tracking, and real-time dashboard for AWS SQS Dead Letter Queues
+> Enterprise-grade AWS SQS Dead Letter Queue monitoring with Claude AI multi-agent investigation, automated PR generation, and real-time observability dashboard
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
 [![AWS](https://img.shields.io/badge/AWS-SQS-orange)](https://aws.amazon.com/sqs/)
@@ -85,13 +84,29 @@ Dynamic: license-file
 
 ## 🌟 Features
 
-### 🤖 **Auto-Investigation with Claude AI**
+### 🎨 **BHiveQ Observability Hub** (NEW!)
+- Professional dark-themed web interface with LPD Digital Hive branding
+- Real-time agent status tracking with activity indicators
+- Live agent activity log streaming
+- Critical alerts with pulsing badges for DLQs over 100 messages
+- Force Reinvestigation button for manual triggers
+- WebSocket-powered real-time updates
+- Bootstrap 5 + responsive design
+- Runs locally on http://localhost:5001
+
+### 🤖 **Auto-Investigation with Claude AI & MCP Tools**
 - Automatically triggers Claude Code when DLQs receive messages
-- Multi-agent architecture with subagents for comprehensive analysis
+- Multi-agent architecture with Google ADK framework
+- Enhanced with 5 special MCP tools:
+  - **Context7**: Library documentation and code examples search
+  - **AWS Documentation**: AWS service docs and error code lookup
+  - **CloudWatch Logs**: Advanced log analysis with filtering
+  - **Lambda Tools**: Lambda function debugging and analysis
+  - **Sequential Thinking**: Systematic root cause analysis
 - Creates GitHub PRs with fixes automatically
 - Smart cooldown and timeout management
 
-### 📊 **Enhanced Live Dashboard**
+### 📊 **Terminal Dashboard**
 - Real-time multi-panel monitoring interface
 - Tracks DLQ status, Claude agents, and GitHub PRs
 - Investigation timeline with duration tracking
@@ -111,9 +126,10 @@ Dynamic: license-file
 
 ## 📋 Prerequisites
 
-- Python 3.8+
-- AWS Account with SQS access
-- GitHub account with Personal Access Token
+- Python 3.8+ (tested with 3.11)
+- AWS Account with SQS access (configured profile)
+- GitHub account (uses `gh` CLI token)
+- Gemini API key for Google ADK agents
 - macOS (for notifications)
 - Claude Code CLI installed
 
@@ -130,26 +146,42 @@ cd lpd-claude-code-monitor
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+# Install Google ADK and additional dependencies
+pip install google-adk google-generativeai
+pip install -r requirements_adk.txt
 ```
 
 ### 3. Configure environment
 ```bash
 cp .env.template .env
 # Edit .env with your settings:
-# - GITHUB_USERNAME
-# - AWS credentials
+# - GEMINI_API_KEY (required for ADK agents)
+# - AWS_PROFILE (default: FABIO-PROD)
+# - AWS_REGION (default: sa-east-1)
+
+# GitHub token from gh CLI (automatic)
+export GITHUB_TOKEN=$(gh auth token 2>/dev/null)
 ```
 
 ### 4. Start monitoring
 ```bash
-# Production monitoring with auto-investigation
-./start_monitor.sh production
+# INTEGRATED MODE - Web Dashboard + ADK Monitor (Recommended)
+./scripts/start_integrated.sh
+# Starts both ADK multi-agent monitoring and web dashboard
+# Open http://localhost:5001 in your browser
 
-# Enhanced dashboard
-./start_monitor.sh enhanced
+# OR Web Dashboard only
+./scripts/start_dashboard.sh
+
+# OR Terminal monitoring with auto-investigation
+./scripts/start_monitor.sh adk-production
+
+# OR Enhanced terminal dashboard
+./scripts/start_monitor.sh enhanced
 
 # Test notifications
-./start_monitor.sh notification-test
+./scripts/start_monitor.sh notification-test
 ```
 
 ## 🎯 Usage
@@ -158,12 +190,16 @@ cp .env.template .env
 
 | Command | Description |
 |---------|-------------|
-| `./start_monitor.sh production` | Start production DLQ monitoring |
-| `./start_monitor.sh enhanced` | Launch enhanced dashboard |
-| `./start_monitor.sh discover` | Discover all DLQ queues |
-| `./start_monitor.sh test` | Test mode (3 cycles) |
-| `./start_monitor.sh cli monitor` | CLI monitoring interface |
-| `./start_monitor.sh pr-audio-test` | Test PR audio notifications |
+| `./scripts/start_integrated.sh` | **🚀 Integrated Mode** - ADK Monitor + Web Dashboard (Best) |
+| `./scripts/start_dashboard.sh` | LPD Hive Web Dashboard only |
+| `./scripts/start_monitor.sh adk-production` | ADK multi-agent monitoring (terminal) |
+| `./scripts/start_monitor.sh production` | Standard production monitoring |
+| `./scripts/start_monitor.sh enhanced` | Enhanced terminal dashboard |
+| `./scripts/start_monitor.sh discover` | Discover all DLQ queues |
+| `./scripts/start_monitor.sh test` | Test mode (3 cycles) |
+| `./scripts/start_monitor.sh cli monitor` | CLI monitoring interface |
+| `./scripts/start_monitor.sh pr-audio-test` | Test PR audio notifications |
+| `python tests/validation/test_adk_simple.py` | Validate ADK system setup |
 
 ### Configuration
 

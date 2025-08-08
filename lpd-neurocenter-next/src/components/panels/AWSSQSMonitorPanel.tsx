@@ -103,7 +103,7 @@ export function AWSSQSMonitorPanel() {
   const { data: queues = [], isLoading, refetch } = useQuery({
     queryKey: ['production-queues'],
     queryFn: () => fetchQueues(false),
-    refetchInterval: 30000,
+    refetchInterval: 15000, // Reduced from 30s to 15s for better responsiveness
   })
   
   // Manual refresh function that bypasses cache

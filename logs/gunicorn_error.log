@@ -1,0 +1,24 @@
+[2025-08-08 13:32:02 -0400] [18781] [INFO] Starting gunicorn 23.0.0
+[2025-08-08 13:32:02 -0400] [18781] [INFO] Listening at: http://0.0.0.0:5002 (18781)
+[2025-08-08 13:32:02 -0400] [18781] [INFO] Using worker: sync
+[2025-08-08 13:32:02 -0400] [18869] [INFO] Booting worker with pid: 18869
+[2025-08-08 13:32:02 -0400] [18870] [INFO] Booting worker with pid: 18870
+[2025-08-08 13:32:02 -0400] [18871] [INFO] Booting worker with pid: 18871
+[2025-08-08 13:32:02 -0400] [18872] [INFO] Booting worker with pid: 18872
+[2025-08-08 13:32:02 -0400] [18873] [INFO] Booting worker with pid: 18873
+[2025-08-08 13:32:02 -0400] [18874] [INFO] Booting worker with pid: 18874
+[2025-08-08 13:32:02 -0400] [18875] [INFO] Booting worker with pid: 18875
+[2025-08-08 13:32:02 -0400] [18876] [INFO] Booting worker with pid: 18876
+[2025-08-08 13:32:02 -0400] [18877] [INFO] Booting worker with pid: 18877
+[2025-08-08 13:32:02 -0400] [18912] [INFO] Booting worker with pid: 18912
+[2025-08-08 13:32:02 -0400] [18913] [INFO] Booting worker with pid: 18913
+[2025-08-08 13:32:02 -0400] [18914] [INFO] Booting worker with pid: 18914
+[2025-08-08 13:32:02 -0400] [18915] [INFO] Booting worker with pid: 18915
+[2025-08-08 13:32:02 -0400] [18916] [INFO] Booting worker with pid: 18916
+[2025-08-08 13:32:02 -0400] [18917] [INFO] Booting worker with pid: 18917
+[2025-08-08 13:32:02 -0400] [18918] [INFO] Booting worker with pid: 18918
+[2025-08-08 13:32:02 -0400] [18919] [INFO] Booting worker with pid: 18919
+[2025-08-08 13:32:02 -0400] [18952] [INFO] Booting worker with pid: 18952
+[2025-08-08 13:32:03 -0400] [18953] [INFO] Booting worker with pid: 18953
+[2025-08-08 13:32:03 -0400] [18954] [INFO] Booting worker with pid: 18954
+[2025-08-08 13:32:03 -0400] [18955] [INFO] Booting worker with pid: 18955

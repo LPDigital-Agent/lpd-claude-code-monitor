@@ -39,15 +39,6 @@ export function DeadLetterQueuesPanel() {
     <Card elevation="md" variant="glass" className="h-full flex flex-col bg-neutral-900/80">
       <CardHeader
         className="bg-gradient-to-r from-critical-900/20 to-brand-900/20 border-b border-neutral-800"
-        title={
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-critical-400 animate-pulse" />
-            <div>
-              <h3 className="text-neutral-0 font-heading font-semibold">Dead Letter Queues</h3>
-              <p className="text-xs text-neutral-400">Active Investigations Only</p>
-            </div>
-          </div>
-        }
         aside={
           <div className="flex gap-2">
             <Badge 
@@ -71,7 +62,15 @@ export function DeadLetterQueuesPanel() {
             </Badge>
           </div>
         }
-      />
+      >
+        <div className="flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-critical-400 animate-pulse" />
+          <div>
+            <h3 className="text-neutral-0 font-heading font-semibold">Dead Letter Queues</h3>
+            <p className="text-xs text-neutral-400">Active Investigations Only</p>
+          </div>
+        </div>
+      </CardHeader>
 
       <CardContent className="flex-1 overflow-y-auto">
         {dlqs.length === 0 ? (

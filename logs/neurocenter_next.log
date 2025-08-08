@@ -6,22 +6,4 @@
   - Local:        http://localhost:3001
 
  ✓ Starting...
- ✓ Ready in 1237ms
- ✓ Compiled /api/flask/api/active-investigations in 67ms (53 modules)
- GET /api/flask/api/active-investigations 200 in 127ms
- GET /api/flask/api/active-investigations 200 in 17ms
- GET /api/flask/api/active-investigations 200 in 5ms
- ✓ Compiled /api/flask/api/dlqs in 130ms (55 modules)
- GET /api/flask/api/dlqs 200 in 155ms
- GET /api/flask/api/active-investigations 200 in 50ms
- GET /api/flask/api/active-investigations 200 in 14ms
- GET /api/flask/api/active-investigations 200 in 12ms
- GET /api/flask/api/active-investigations 200 in 18ms
- GET /api/flask/api/active-investigations 200 in 21ms
- GET /api/flask/api/active-investigations 200 in 15ms
- GET /api/flask/api/active-investigations 200 in 17ms
- GET /api/flask/api/active-investigations 200 in 10ms
- ○ Compiling / ...
- ✓ Compiled / in 815ms (684 modules)
- GET / 200 in 1001ms
- ✓ Compiled in 166ms (332 modules)
+ ✓ Ready in 1240ms

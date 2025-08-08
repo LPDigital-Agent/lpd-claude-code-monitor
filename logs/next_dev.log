@@ -1,0 +1,128 @@
+
+> lpd-neurocenter-next@0.1.0 dev
+> next dev -p 3001 -p 3001
+
+  ▲ Next.js 14.2.0
+  - Local:        http://localhost:3001
+
+ ✓ Starting...
+ ✓ Ready in 1213ms
+ ○ Compiling / ...
+ ✓ Compiled / in 959ms (676 modules)
+ GET / 200 in 1075ms
+ ✓ Compiled in 177ms (344 modules)
+ GET / 200 in 79ms
+ ✓ Compiled /api/flask/api/dlqs in 195ms (362 modules)
+ ✓ Compiled (364 modules)
+ GET /api/flask/api/active-investigations 200 in 376ms
+ GET /api/flask/api/active-investigations 200 in 13ms
+ GET /api/flask/api/dlqs 200 in 4027ms
+ GET / 200 in 114ms
+ GET /api/flask/api/active-investigations 200 in 22ms
+ ✓ Compiled in 464ms (708 modules)
+ GET /api/flask/api/active-investigations 200 in 10ms
+ GET /api/flask/api/active-investigations 200 in 16ms
+ GET /api/flask/api/active-investigations 200 in 9ms
+ GET /api/flask/api/dlqs 200 in 9985ms
+ GET /api/flask/api/active-investigations 200 in 17ms
+ GET /api/flask/api/active-investigations 200 in 15ms
+ GET /api/flask/api/active-investigations 200 in 13ms
+ GET /api/flask/api/dlqs 200 in 9106ms
+ GET /api/flask/api/active-investigations 200 in 75ms
+ GET /api/flask/api/dlqs 200 in 51ms
+ GET /api/flask/api/active-investigations 200 in 21ms
+ GET /api/flask/api/active-investigations 200 in 17ms
+ GET /api/flask/api/dlqs 200 in 20ms
+ GET / 200 in 134ms
+ GET /api/flask/api/active-investigations 200 in 25ms
+ GET /api/flask/api/active-investigations 200 in 6ms
+ GET /api/flask/api/dlqs 200 in 4483ms
+ GET /api/flask/api/active-investigations 200 in 7ms
+ GET /api/flask/api/active-investigations 200 in 7ms
+ ✓ Compiled /_not-found in 202ms (697 modules)
+ GET /api/flask/api/agent-activities 404 in 271ms
+ GET /api/flask/api/active-investigations 200 in 20ms
+ GET /api/flask/api/dlqs 200 in 14ms
+ GET /api/flask/api/dlqs?refresh=true&t=1754633890577 200 in 6ms
+ GET /api/flask/api/dlqs 200 in 4363ms
+ GET /api/flask/api/active-investigations 200 in 6ms
+ GET /api/flask/api/active-investigations 200 in 17ms
+ GET /api/flask/api/active-investigations 200 in 7ms
+ GET /api/flask/api/active-investigations 200 in 10ms
+ GET /api/flask/api/active-investigations 200 in 15ms
+ GET /api/flask/api/active-investigations 200 in 12ms
+ GET /api/flask/api/active-investigations 200 in 69ms
+ GET /api/flask/api/dlqs 200 in 55ms
+ GET /api/flask/api/active-investigations 200 in 7ms
+ GET /api/flask/api/active-investigations 200 in 102ms
+ GET /api/flask/api/dlqs 200 in 4456ms
+ GET /api/flask/api/active-investigations 200 in 17ms
+ GET /api/flask/api/dlqs 200 in 7180ms
+ GET /api/flask/api/active-investigations 200 in 66ms
+ GET /api/flask/api/dlqs 200 in 62ms
+ GET /api/flask/api/active-investigations 200 in 13ms
+ GET /api/flask/api/active-investigations 200 in 113ms
+ GET /api/flask/api/dlqs 200 in 85ms
+ GET /api/flask/api/active-investigations 200 in 37ms
+ GET /api/flask/api/active-investigations 200 in 34ms
+ GET /api/flask/api/active-investigations 200 in 71ms
+ GET /api/flask/api/dlqs 200 in 69ms
+ GET /api/flask/api/active-investigations 200 in 106ms
+ GET /api/flask/api/active-investigations 200 in 17ms
+ GET /api/flask/api/dlqs 200 in 5121ms
+ GET /api/flask/api/active-investigations 200 in 9ms
+ GET /api/flask/api/active-investigations 200 in 54ms
+ GET /api/flask/api/dlqs 200 in 10ms
+ GET /api/flask/api/dlqs?refresh=true&t=1754660825486 200 in 9ms
+ GET /api/flask/api/active-investigations 200 in 8ms
+ GET /api/flask/api/active-investigations 200 in 16ms
+ GET /api/flask/api/active-investigations 200 in 12ms
+ GET /api/flask/api/active-investigations 200 in 19ms
+ GET /api/flask/api/active-investigations 200 in 13ms
+ GET /api/flask/api/active-investigations 200 in 8ms
+ GET /api/flask/api/dlqs 200 in 4423ms
+ GET /api/flask/api/active-investigations 200 in 14ms
+ GET /api/flask/api/active-investigations 200 in 16ms
+ GET /api/flask/api/active-investigations 200 in 25ms
+ GET /api/flask/api/active-investigations 200 in 24ms
+ GET /api/flask/api/active-investigations 200 in 29ms
+ GET /api/flask/api/dlqs 200 in 27ms
+ GET /api/flask/api/active-investigations 200 in 16ms
+ GET /api/flask/api/active-investigations 200 in 11ms
+ GET /api/flask/api/active-investigations 200 in 9ms
+ GET /api/flask/api/active-investigations 200 in 9ms
+ GET /api/flask/api/active-investigations 200 in 10ms
+ GET /api/flask/api/active-investigations 200 in 4ms
+ GET /api/flask/api/dlqs 200 in 4005ms
+ GET /api/flask/api/active-investigations 200 in 13ms
+ GET /api/flask/api/active-investigations 200 in 9ms
+ ○ Compiling /logs ...
+ ✓ Compiled /logs in 501ms (706 modules)
+ GET /logs 200 in 733ms
+ ✓ Compiled /api/flask/api/logs in 183ms (373 modules)
+Logs API: received 112486 chars, logs field: 46916 chars
+ GET /api/flask/api/logs?level=all 200 in 224ms
+Logs API: received 112486 chars, logs field: 46916 chars
+ GET /api/flask/api/logs?level=all 200 in 10ms
+ GET /api/flask/api/active-investigations 200 in 20ms
+ GET /api/flask/api/active-investigations 200 in 5ms
+ GET /api/flask/api/dlqs 200 in 8ms
+ GET /api/flask/api/active-investigations 200 in 4ms
+ GET /api/flask/api/active-investigations 200 in 49ms
+ GET /api/flask/api/active-investigations 200 in 88ms
+ GET /api/flask/api/active-investigations 200 in 7ms
+ GET /api/flask/api/dlqs 200 in 4584ms
+ GET /api/flask/api/active-investigations 200 in 37ms
+ GET /api/flask/api/active-investigations 200 in 79ms
+ GET /api/flask/api/dlqs 200 in 4339ms
+ GET /api/flask/api/active-investigations 200 in 76ms
+ GET /api/flask/api/dlqs 200 in 73ms
+ GET /api/flask/api/active-investigations 200 in 158ms
+ GET /api/flask/api/dlqs 200 in 166ms
+ GET /api/flask/api/active-investigations 200 in 100ms
+ GET /api/flask/api/dlqs 200 in 4737ms
+ GET /api/flask/api/active-investigations 200 in 98ms
+ GET /api/flask/api/dlqs 200 in 240ms
+ GET /api/flask/api/active-investigations 200 in 71ms
+ GET /api/flask/api/dlqs 200 in 4795ms
+[?25h

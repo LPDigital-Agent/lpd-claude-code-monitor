@@ -17,8 +17,6 @@ export async function GET(request: NextRequest) {
         'Accept': 'application/json',
       },
       signal: controller.signal,
-      // Explicitly set no compression to ensure we get full data
-      compress: false,
     })
     
     clearTimeout(timeoutId)
